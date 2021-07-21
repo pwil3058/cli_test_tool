@@ -1,6 +1,8 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use log;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use stderrlog;
 use structopt::StructOpt;
@@ -39,13 +41,33 @@ fn main() {
         .unwrap();
 
     log::debug!("CLI Test Tool is under construction: {:?}", cli_options);
+
+    let mut script = String::new();
+    match File::open(&cli_options.script) {
+        Ok(mut file) => match file.read_to_string(&mut script) {
+            Ok(size) => log::trace!("Read {} bytes", size),
+            Err(err) => {
+                log::error!("Error reading script file: {}", err);
+                std::process::exit(-1);
+            }
+        },
+        Err(err) => {
+            log::error!(
+                "Error opening script file: {:?}: {}. Aborting.",
+                cli_options.script,
+                err
+            );
+            std::process::exit(-1);
+        }
+    }
+
     let tempdir = if cli_options.use_temp_dir {
         match TempDir::new("cli_test") {
             Ok(tempdir) => {
                 log::info!("{:?}: temporary created", tempdir.path());
                 if let Err(err) = std::env::set_current_dir(tempdir.path()) {
                     log::error!(
-                        "Failed make {:?} the current directory: {}",
+                        "Failed to make {:?} the current directory: {}. Aborting.",
                         tempdir.path(),
                         err
                     );
@@ -67,5 +89,9 @@ fn main() {
         if let Err(err) = tempdir.close() {
             log::error!("Problem closing temporary directory: {}", err);
         }
+    }
+
+    if !cli_options.quiet {
+        println!("{:?}: PASSED", cli_options.script)
     }
 }
