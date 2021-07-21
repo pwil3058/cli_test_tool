@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use log;
+use std::path::PathBuf;
 use stderrlog;
 use structopt::StructOpt;
 use tempdir;
@@ -19,9 +20,12 @@ struct CLIOptions {
     /// Timestamp (sec, ms, ns, none)
     #[structopt(short = "t", long = "timestamp")]
     ts: Option<stderrlog::Timestamp>,
-    /// Run test in a temporary directory
+    /// Run test in a clean temporary directory
     #[structopt(short, long)]
     use_temp_dir: bool,
+    /// The name/path of the file containing the test script
+    #[structopt(required = true)]
+    script: PathBuf,
 }
 
 fn main() {
