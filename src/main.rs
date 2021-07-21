@@ -39,13 +39,33 @@ fn main() {
         .unwrap();
 
     log::debug!("CLI Test Tool is under construction: {:?}", cli_options);
-    if cli_options.use_temp_dir {
+    let tempdir = if cli_options.use_temp_dir {
         match TempDir::new("cli_test") {
-            Ok(tempdir) => log::info!("{:?}: temporary created", tempdir.path()),
+            Ok(tempdir) => {
+                log::info!("{:?}: temporary created", tempdir.path());
+                if let Err(err) = std::env::set_current_dir(tempdir.path()) {
+                    log::error!(
+                        "Failed make {:?} the current directory: {}",
+                        tempdir.path(),
+                        err
+                    );
+                    std::process::exit(-1);
+                };
+                Some(tempdir)
+            }
             Err(err) => {
                 log::error!("Failed to create temporary directory ({}). Aborting!", err);
                 std::process::exit(-1);
             }
+        }
+    } else {
+        None
+    };
+    log::info!("Current working directory: {:?}", std::env::current_dir());
+
+    if let Some(tempdir) = tempdir {
+        if let Err(err) = tempdir.close() {
+            log::error!("Problem closing temporary directory: {}", err);
         }
     }
 }
