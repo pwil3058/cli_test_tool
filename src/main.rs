@@ -91,6 +91,8 @@ fn main() {
         }
     }
 
+    println!("{:?}", shlex::split("GHJ=jk ls -l | whatever 2> test"));
+
     if !cli_options.quiet {
         println!("{:?}: PASSED", cli_options.script)
     }
