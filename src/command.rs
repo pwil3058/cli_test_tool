@@ -1,5 +1,21 @@
 // Copyright 2022 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+use std::env;
+use std::str::FromStr;
+
+#[derive(Debug, Default)]
+pub struct Outcome {
+    e_code: i32,
+    std_out: Vec<u8>,
+    std_err: Vec<u8>,
+}
+
+#[derive(Debug)]
+pub enum Failure {
+    IOError(std::io::Error),
+    Why(&'static str),
+}
+
 #[derive(Debug)]
 pub struct Command {
     cmd_line_string: String,
@@ -36,6 +52,20 @@ impl Command {
                 }
             }
             None => Err("Poorly formed command line".to_string()),
+        }
+    }
+
+    pub fn run(&self) -> Result<Outcome, Failure> {
+        match self.cmd_line[0].as_str() {
+            "umask" => Err(Failure::Why("\"umask\" is not available")),
+            "cd" => match env::set_current_dir(&self.cmd_line[1]) {
+                Ok(_) => {
+                    env::set_var("PWD", env::current_dir().unwrap());
+                    Ok(Outcome::default())
+                }
+                Err(err) => Err(Failure::IOError(err)),
+            },
+            _ => Err(Failure::Why("placeholder")),
         }
     }
 }
