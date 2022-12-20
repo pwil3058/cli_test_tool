@@ -65,6 +65,23 @@ impl Command {
                 }
                 Err(err) => Err(Failure::IOError(err)),
             },
+            "export" => {
+                for cmd in &self.cmd_line[1..] {
+                    let pair: Vec<&str> = cmd.as_str().split("=").collect();
+                    if pair.len() == 2 {
+                        env::set_var(pair[0], pair[1]);
+                    } else {
+                        return Err(Failure::Why("expected \"ARG=VALUE\""));
+                    }
+                }
+                Ok(Outcome::default())
+            }
+            "unset" => {
+                for var in &self.cmd_line[1..] {
+                    env::remove_var(var);
+                }
+                Ok(Outcome::default())
+            }
             _ => Err(Failure::Why("placeholder")),
         }
     }
