@@ -58,12 +58,15 @@ impl Command {
     pub fn run(&self) -> Result<Outcome, Failure> {
         match self.cmd_line[0].as_str() {
             "umask" => Err(Failure::Why("\"umask\" is not available")),
-            "cd" => match env::set_current_dir(&self.cmd_line[1]) {
-                Ok(_) => {
-                    env::set_var("PWD", env::current_dir().unwrap());
-                    Ok(Outcome::default())
-                }
-                Err(err) => Err(Failure::IOError(err)),
+            "cd" => match self.cmd_line.len() {
+                2 => match env::set_current_dir(&self.cmd_line[1]) {
+                    Ok(_) => {
+                        env::set_var("PWD", env::current_dir().unwrap());
+                        Ok(Outcome::default())
+                    }
+                    Err(err) => Err(Failure::IOError(err)),
+                },
+                _ => Err(Failure::Why("expected exactly one argument")),
             },
             "export" => {
                 for cmd in &self.cmd_line[1..] {
