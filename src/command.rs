@@ -20,7 +20,7 @@ pub enum Failure {
 pub struct Command {
     cmd_line_string: String,
     cmd_line: Vec<String>,
-    input_text: Option<String>,
+    input_path: Option<String>,
     redirection_path: Option<String>,
 }
 
@@ -46,7 +46,7 @@ impl Command {
                     Ok(Command {
                         cmd_line_string,
                         cmd_line,
-                        input_text: None,
+                        input_path: None,
                         redirection_path,
                     })
                 }
@@ -85,7 +85,19 @@ impl Command {
                 }
                 Ok(Outcome::default())
             }
-            _ => Err(Failure::Why("placeholder")),
+            program_name => {
+                let input_file = match self.input_path {
+                    Some(ref path) => match std::fs::File::open(path) {
+                        Ok(file) => std::process::Stdio::from(file),
+                        Err(err) => return Err(Failure::IOError(err)),
+                    },
+                    None => std::process::Stdio::null(),
+                };
+                let program = std::process::Command::new(program_name)
+                    .args(&self.cmd_line[1..])
+                    .stdin(input_file);
+                Ok(Outcome::default())
+            }
         }
     }
 }
