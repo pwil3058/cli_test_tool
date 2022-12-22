@@ -11,6 +11,16 @@ pub struct Outcome {
     std_err: Vec<u8>,
 }
 
+impl From<std::process::Output> for Outcome {
+    fn from(output: std::process::Output) -> Self {
+        Outcome {
+            e_code: output.status.code().expect("process terminated by signal"),
+            std_out: output.stdout,
+            std_err: output.stderr,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Failure {
     IOError(std::io::Error),
@@ -95,10 +105,17 @@ impl Command {
                     Some(ref path) => std::process::Stdio::from(std::fs::File::open(path)?),
                     None => std::process::Stdio::null(),
                 };
-                let program = std::process::Command::new(program_name)
-                    .args(&self.cmd_line[1..])
-                    .stdin(input_file);
-                Ok(Outcome::default())
+                let output_file = match self.redirection_path {
+                    Some(ref path) => std::process::Stdio::from(std::fs::File::open(path)?),
+                    None => std::process::Stdio::piped(),
+                };
+                Ok(Outcome::from(
+                    std::process::Command::new(program_name)
+                        .args(&self.cmd_line[1..])
+                        .stdin(input_file)
+                        .stdout(output_file)
+                        .output()?,
+                ))
             }
         }
     }
