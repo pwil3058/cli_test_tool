@@ -1,5 +1,6 @@
 // Copyright 2022 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+use std::convert::From;
 use std::env;
 use std::str::FromStr;
 
@@ -14,6 +15,12 @@ pub struct Outcome {
 pub enum Failure {
     IOError(std::io::Error),
     Why(&'static str),
+}
+
+impl From<std::io::Error> for Failure {
+    fn from(error: std::io::Error) -> Self {
+        Failure::IOError(error)
+    }
 }
 
 #[derive(Debug)]
@@ -59,13 +66,11 @@ impl Command {
         match self.cmd_line[0].as_str() {
             "umask" => Err(Failure::Why("\"umask\" is not available")),
             "cd" => match self.cmd_line.len() {
-                2 => match env::set_current_dir(&self.cmd_line[1]) {
-                    Ok(_) => {
-                        env::set_var("PWD", env::current_dir().unwrap());
-                        Ok(Outcome::default())
-                    }
-                    Err(err) => Err(Failure::IOError(err)),
-                },
+                2 => {
+                    env::set_current_dir(&self.cmd_line[1])?;
+                    env::set_var("PWD", env::current_dir()?);
+                    Ok(Outcome::default())
+                }
                 _ => Err(Failure::Why("expected exactly one argument")),
             },
             "export" => {
@@ -87,10 +92,7 @@ impl Command {
             }
             program_name => {
                 let input_file = match self.input_path {
-                    Some(ref path) => match std::fs::File::open(path) {
-                        Ok(file) => std::process::Stdio::from(file),
-                        Err(err) => return Err(Failure::IOError(err)),
-                    },
+                    Some(ref path) => std::process::Stdio::from(std::fs::File::open(path)?),
                     None => std::process::Stdio::null(),
                 };
                 let program = std::process::Command::new(program_name)
