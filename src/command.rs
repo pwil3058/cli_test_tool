@@ -2,13 +2,12 @@
 
 use std::convert::From;
 use std::env;
-use std::str::FromStr;
 
 #[derive(Debug, Default)]
 pub struct Outcome {
-    e_code: i32,
-    std_out: Vec<u8>,
-    std_err: Vec<u8>,
+    pub e_code: i32,
+    pub std_out: Vec<u8>,
+    pub std_err: Vec<u8>,
 }
 
 impl From<std::process::Output> for Outcome {
@@ -35,35 +34,47 @@ impl From<std::io::Error> for Failure {
 
 #[derive(Debug)]
 pub struct Command {
-    cmd_line_string: String,
+    pub cmd_line_string: String,
     cmd_line: Vec<String>,
     input_path: Option<String>,
     redirection_path: Option<String>,
 }
 
 impl Command {
-    pub fn new(cmd_line_string: String) -> Result<Self, String> {
-        match shlex::split(&cmd_line_string) {
+    pub fn new(cmd_line_string: &str) -> Result<Self, String> {
+        match shlex::split(cmd_line_string) {
             Some(mut cmd_line) => {
                 if cmd_line.is_empty() {
                     Err("Empty command line.".to_string())
                 } else {
-                    let redirection_path = match cmd_line.iter().position(|x| *x == ">") {
-                        Some(red_index) => match cmd_line.len() - red_index {
-                            1 => return Err("expected redirection path".to_string()),
-                            2 => {
-                                let path = cmd_line.pop().unwrap();
-                                cmd_line.truncate(red_index);
+                    let input_path = match cmd_line.iter().position(|x| *x == "<") {
+                        Some(i_index) => match cmd_line.get(i_index + 1) {
+                            Some(path) => {
+                                let path = path.clone();
+                                cmd_line.remove(i_index);
+                                cmd_line.remove(i_index);
                                 Some(path)
                             }
-                            _ => return Err("unexpected arguments".to_string()),
+                            None => return Err("expected input file path".to_string()),
+                        },
+                        None => None,
+                    };
+                    let redirection_path = match cmd_line.iter().position(|x| *x == ">") {
+                        Some(red_index) => match cmd_line.get(red_index + 1) {
+                            Some(path) => {
+                                let path = path.clone();
+                                cmd_line.remove(red_index);
+                                cmd_line.remove(red_index);
+                                Some(path)
+                            }
+                            None => return Err("expected input file path".to_string()),
                         },
                         None => None,
                     };
                     Ok(Command {
-                        cmd_line_string,
+                        cmd_line_string: String::from(cmd_line_string),
                         cmd_line,
-                        input_path: None,
+                        input_path,
                         redirection_path,
                     })
                 }
@@ -127,6 +138,6 @@ mod command_tests {
 
     #[test]
     fn new_command() {
-        println!("{:?}", Command::new("ls > aaa".to_string()))
+        println!("{:?}", Command::new("whatever x y < bbb > aaa"))
     }
 }

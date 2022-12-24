@@ -87,13 +87,25 @@ fn main() {
     };
     log::info!("Current working directory: {:?}", std::env::current_dir());
 
+    println!("Script: {}", script);
+    let lines: Vec<&str> = script.lines().collect();
+    for line in lines {
+        println!("Line: {:?} : {}", line, line.starts_with("$"));
+        if line.starts_with("$") {
+            let cmd = command::Command::new(&line[1..]);
+            println!("Command: {:?}", cmd);
+            if let Ok(cmd) = cmd {
+                println!("{:?}", cmd.cmd_line_string);
+                println!("{:?}", cmd.run());
+            }
+        }
+    }
+
     if let Some(tempdir) = tempdir {
         if let Err(err) = tempdir.close() {
             log::error!("Problem closing temporary directory: {}", err);
         }
     }
-
-    println!("{:?}", shlex::split("GHJ=jk ls -l | whatever 2> test"));
 
     if !cli_options.quiet {
         println!("{:?}: PASSED", cli_options.script)
