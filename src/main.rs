@@ -2,13 +2,10 @@
 
 mod command;
 
-use log;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use stderrlog;
 use structopt::StructOpt;
-use tempdir;
 use tempdir::TempDir;
 
 /// CLI Test Tool
@@ -90,13 +87,18 @@ fn main() {
     println!("Script: {}", script);
     let lines: Vec<&str> = script.lines().collect();
     for line in lines {
-        println!("Line: {:?} : {}", line, line.starts_with("$"));
-        if line.starts_with("$") {
-            let cmd = command::Command::new(&line[1..]);
+        println!("Line: {:?} : {}", line, line.starts_with('$'));
+        if let Some(stripped) = line.strip_prefix('$') {
+            let cmd = command::Command::new(stripped);
             println!("Command: {:?}", cmd);
             if let Ok(cmd) = cmd {
                 println!("{:?}", cmd.cmd_line_string);
-                println!("{:?}", cmd.run());
+                let outcome = cmd.run();
+                println!("Outcome: {:?}", &outcome);
+                if let Ok(outcome) = &outcome {
+                    println!("stdout: {:?}", &outcome.std_out);
+                    println!("stderr: {:?}", &outcome.std_err);
+                }
             }
         }
     }

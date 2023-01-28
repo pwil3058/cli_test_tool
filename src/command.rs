@@ -6,16 +6,16 @@ use std::env;
 #[derive(Debug, Default)]
 pub struct Outcome {
     pub e_code: i32,
-    pub std_out: Vec<u8>,
-    pub std_err: Vec<u8>,
+    pub std_out: String,
+    pub std_err: String,
 }
 
 impl From<std::process::Output> for Outcome {
     fn from(output: std::process::Output) -> Self {
         Outcome {
             e_code: output.status.code().expect("process terminated by signal"),
-            std_out: output.stdout,
-            std_err: output.stderr,
+            std_out: String::from_utf8(output.stdout).unwrap(),
+            std_err: String::from_utf8(output.stderr).unwrap(),
         }
     }
 }
@@ -96,7 +96,7 @@ impl Command {
             },
             "export" => {
                 for cmd in &self.cmd_line[1..] {
-                    let pair: Vec<&str> = cmd.as_str().split("=").collect();
+                    let pair: Vec<&str> = cmd.as_str().split('=').collect();
                     if pair.len() == 2 {
                         env::set_var(pair[0], pair[1]);
                     } else {
