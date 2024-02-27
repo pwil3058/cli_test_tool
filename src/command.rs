@@ -41,11 +41,11 @@ pub struct Command {
 }
 
 impl Command {
-    pub fn new(cmd_line_string: &str) -> Result<Self, String> {
+    pub fn new(cmd_line_string: &str) -> Result<Self, &'static str> {
         match shlex::split(cmd_line_string) {
             Some(mut cmd_line) => {
                 if cmd_line.is_empty() {
-                    Err("Empty command line.".to_string())
+                    Err("Empty command line.")
                 } else {
                     let input_path = match cmd_line.iter().position(|x| *x == "<") {
                         Some(i_index) => match cmd_line.get(i_index + 1) {
@@ -55,7 +55,7 @@ impl Command {
                                 cmd_line.remove(i_index);
                                 Some(path)
                             }
-                            None => return Err("expected input file path".to_string()),
+                            None => return Err("expected input file path"),
                         },
                         None => None,
                     };
@@ -67,7 +67,7 @@ impl Command {
                                 cmd_line.remove(red_index);
                                 Some(path)
                             }
-                            None => return Err("expected input file path".to_string()),
+                            None => return Err("expected input file path"),
                         },
                         None => None,
                     };
@@ -79,7 +79,7 @@ impl Command {
                     })
                 }
             }
-            None => Err("Poorly formed command line".to_string()),
+            None => Err("Poorly formed command line"),
         }
     }
 
