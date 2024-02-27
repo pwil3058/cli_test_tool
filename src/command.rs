@@ -5,7 +5,7 @@ use std::env;
 
 #[derive(Debug, Default)]
 pub struct Outcome {
-    pub e_code: i32,
+    pub e_code: Option<i32>,
     pub std_out: String,
     pub std_err: String,
 }
@@ -13,7 +13,7 @@ pub struct Outcome {
 impl From<std::process::Output> for Outcome {
     fn from(output: std::process::Output) -> Self {
         Outcome {
-            e_code: output.status.code().expect("process terminated by signal"),
+            e_code: output.status.code(),
             std_out: String::from_utf8(output.stdout).unwrap(),
             std_err: String::from_utf8(output.stderr).unwrap(),
         }
