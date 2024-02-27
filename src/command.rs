@@ -3,7 +3,7 @@
 use std::convert::From;
 use std::env;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Outcome {
     pub e_code: Option<i32>,
     pub std_out: String,

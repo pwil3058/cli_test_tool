@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 mod command;
+mod script;
 
 use std::fs::File;
 use std::io::Read;
