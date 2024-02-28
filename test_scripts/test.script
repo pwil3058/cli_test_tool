@@ -1,2 +1,5 @@
 $ ls > /dev/null
 $ cd ..
+? 0
+> whatever
+

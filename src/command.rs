@@ -3,11 +3,21 @@
 use std::convert::From;
 use std::env;
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Outcome {
     pub e_code: Option<i32>,
     pub std_out: String,
     pub std_err: String,
+}
+
+impl Default for Outcome {
+    fn default() -> Self {
+        Self {
+            e_code: Some(0),
+            std_out: String::new(),
+            std_err: String::new(),
+        }
+    }
 }
 
 impl From<std::process::Output> for Outcome {

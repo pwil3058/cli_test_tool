@@ -42,6 +42,9 @@ fn main() {
 
     log::debug!("CLI Test Tool is under construction: {:?}", cli_options);
 
+    let new_script = script::Script::read_from(&cli_options.script).unwrap();
+    println!("NEW: {new_script:?}");
+
     let mut script = String::new();
     match File::open(&cli_options.script) {
         Ok(mut file) => match file.read_to_string(&mut script) {
