@@ -84,9 +84,9 @@ fn main() {
                     println!("{:?}: PASSED", cli_options.script)
                 }
             }
-            PassOrFail::Fail(command, expected, actual) => {
+            PassOrFail::Fail(range, command, expected, actual) => {
                 println!(
-                    "{:?}: FAILED: {command}\nexpected: {expected:?}\nactual: {actual:?}",
+                    "{:?}: FAILED: {range:?}: {command}\nexpected: {expected:?}\nactual: {actual:?}",
                     cli_options.script
                 );
                 std::process::exit(-1);

@@ -26,7 +26,7 @@ pub struct Script {
 #[derive(Debug)]
 pub enum PassOrFail {
     Pass,
-    Fail(String, Outcome, Outcome),
+    Fail(Range<usize>, String, Outcome, Outcome),
 }
 
 fn read_script<R: Read>(mut reader: R) -> Result<String, Failure> {
@@ -116,6 +116,7 @@ impl Script {
             println!("Outcome: {outcome:?}");
             if outcome != caeo.expected_outcome {
                 return Ok(PassOrFail::Fail(
+                    caeo.range.clone(),
                     caeo.command.cmd_line_string.clone(),
                     caeo.expected_outcome.clone(),
                     outcome,
