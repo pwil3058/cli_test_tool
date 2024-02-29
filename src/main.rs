@@ -88,7 +88,8 @@ fn main() {
                 println!(
                     "{:?}: FAILED: {command}\nexpected: {expected:?}\nactual: {actual:?}",
                     cli_options.script
-                )
+                );
+                std::process::exit(-1);
             }
         },
         Err(err) => {

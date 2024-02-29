@@ -3,6 +3,7 @@
 use crate::command;
 use std::fs::File;
 use std::io::Read;
+use std::ops::Range;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -13,6 +14,7 @@ use crate::failure::Failure;
 struct CommandAndExpectedOutcome {
     command: Command,
     expected_outcome: Outcome,
+    range: Range<usize>,
 }
 
 #[derive(Debug, Default)]
@@ -52,6 +54,7 @@ impl Script {
                 let command = command::Command::new(stripped)?;
                 let mut expected_outcome = command::Outcome::default();
                 println!("{:?}", command);
+                let start = i;
                 i += 1;
                 while let Some(line) = lines.get(i) {
                     if line.starts_with('$') {
@@ -79,9 +82,11 @@ impl Script {
                     }
                     i += 1;
                 }
+                let range = Range { start, end: i };
                 commands.push(CommandAndExpectedOutcome {
                     command,
                     expected_outcome,
+                    range,
                 })
             } else {
                 i += 1
@@ -106,6 +111,7 @@ impl Script {
     pub fn run(&self) -> Result<PassOrFail, Failure> {
         for caeo in self.commands.iter() {
             println!("Run: {}", caeo.command.cmd_line_string);
+            println!("Lines: {:?}", caeo.range);
             let outcome = caeo.command.run()?;
             println!("Outcome: {outcome:?}");
             if outcome != caeo.expected_outcome {
