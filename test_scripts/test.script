@@ -1,4 +1,6 @@
 $ ls > /dev/null
+? 2
+! ls: write error: Bad file descriptor
 $ cd ..
 ? 0
 > whatever

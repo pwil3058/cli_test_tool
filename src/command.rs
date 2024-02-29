@@ -3,7 +3,9 @@
 use std::convert::From;
 use std::env;
 
-#[derive(Debug, PartialEq, Eq)]
+use crate::failure::Failure;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Outcome {
     pub e_code: Option<i32>,
     pub std_out: String,
@@ -27,18 +29,6 @@ impl From<std::process::Output> for Outcome {
             std_out: String::from_utf8(output.stdout).unwrap(),
             std_err: String::from_utf8(output.stderr).unwrap(),
         }
-    }
-}
-
-#[derive(Debug)]
-pub enum Failure {
-    IOError(std::io::Error),
-    Why(&'static str),
-}
-
-impl From<std::io::Error> for Failure {
-    fn from(error: std::io::Error) -> Self {
-        Failure::IOError(error)
     }
 }
 

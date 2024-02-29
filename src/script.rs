@@ -1,34 +1,13 @@
 // Copyright 2024 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::command;
-use std::error;
-use std::fmt;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
 
 use crate::command::{Command, Outcome};
-
-#[derive(Debug)]
-pub enum Error {
-    IOError(io::Error),
-    Simple(String),
-}
-
-impl From<&str> for Error {
-    fn from(str: &str) -> Self {
-        Self::Simple(str.to_string())
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "An Error has occurred")
-    }
-}
-
-impl error::Error for Error {}
+use crate::failure::Failure;
 
 #[derive(Debug)]
 struct CommandAndExpectedOutcome {
@@ -38,11 +17,17 @@ struct CommandAndExpectedOutcome {
 
 #[derive(Debug, Default)]
 pub struct Script {
-    script: String,
+    _script: String,
     commands: Vec<CommandAndExpectedOutcome>,
 }
 
-fn read_script<R: Read>(mut reader: R) -> Result<String, Error> {
+#[derive(Debug)]
+pub enum PassOrFail {
+    Pass,
+    Fail(String, Outcome, Outcome),
+}
+
+fn read_script<R: Read>(mut reader: R) -> Result<String, Failure> {
     let mut script = String::new();
     match reader.read_to_string(&mut script) {
         Ok(size) => {
@@ -51,25 +36,15 @@ fn read_script<R: Read>(mut reader: R) -> Result<String, Error> {
         }
         Err(err) => {
             log::error!("Error reading script file: {}", err);
-            Err(Error::IOError(err))
-        }
-    }
-}
-
-fn read_script_from(path: &Path) -> Result<String, Error> {
-    match File::open(path) {
-        Ok(mut file) => read_script(file),
-        Err(err) => {
-            log::error!("Error opening script file: {:?}: {}. Aborting.", path, err);
-            Err(Error::IOError(err))
+            Err(Failure::IOError(err))
         }
     }
 }
 
 impl Script {
-    pub fn read<R: Read>(mut reader: R) -> Result<Self, Error> {
+    pub fn read<R: Read>(reader: R) -> Result<Self, Failure> {
         let script = read_script(reader)?;
-        let lines: Vec<&str> = script.lines().collect();
+        let lines: Vec<&str> = script.split_inclusive('\n').collect();
         let mut commands = Vec::new();
         let mut i = 0;
         while let Some(line) = lines.get(i) {
@@ -89,8 +64,10 @@ impl Script {
                             match i32::from_str(trimmed) {
                                 Ok(e_code) => expected_outcome.e_code = Some(e_code),
                                 Err(err) => {
-                                    log::error!("Line: {i}: badly formed error code: {trimmed}");
-                                    return Err(Error::from("Badly formed error code"));
+                                    log::error!(
+                                        "Line: {i}: {err} badly formed error code: {trimmed}"
+                                    );
+                                    return Err(Failure::from("Badly formed error code"));
                                 }
                             }
                         }
@@ -110,16 +87,35 @@ impl Script {
                 i += 1
             }
         }
-        Ok(Self { script, commands })
+        Ok(Self {
+            _script: script,
+            commands,
+        })
     }
 
-    pub fn read_from(path: &Path) -> Result<Self, Error> {
+    pub fn read_from(path: &Path) -> Result<Self, Failure> {
         match File::open(path) {
-            Ok(mut file) => Self::read(file),
+            Ok(file) => Self::read(file),
             Err(err) => {
                 log::error!("Error opening script file: {:?}: {}. Aborting.", path, err);
-                Err(Error::IOError(err))
+                Err(Failure::IOError(err))
             }
         }
+    }
+
+    pub fn run(&self) -> Result<PassOrFail, Failure> {
+        for caeo in self.commands.iter() {
+            println!("Run: {}", caeo.command.cmd_line_string);
+            let outcome = caeo.command.run()?;
+            println!("Outcome: {outcome:?}");
+            if outcome != caeo.expected_outcome {
+                return Ok(PassOrFail::Fail(
+                    caeo.command.cmd_line_string.clone(),
+                    caeo.expected_outcome.clone(),
+                    outcome,
+                ));
+            }
+        }
+        Ok(PassOrFail::Pass)
     }
 }
