@@ -17,6 +17,33 @@ struct CommandAndExpectedOutcome {
     range: Range<usize>,
 }
 
+impl CommandAndExpectedOutcome {
+    pub fn evaluate(&self) -> Result<Evaluation, Error> {
+        match self.command.run() {
+            Ok(outcome) => {
+                if outcome == self.expected_outcome {
+                    Ok(Evaluation::Pass)
+                } else {
+                    Ok(Evaluation::Fail(
+                        self.range.clone(),
+                        self.command.cmd_line_string.clone(),
+                        self.expected_outcome.clone(),
+                        outcome,
+                    ))
+                }
+            }
+            Err(err) => {
+                log::error!(
+                    "Error: {:?}: running: {:?}",
+                    self.range,
+                    self.command.cmd_line_string
+                );
+                Err(err.into())
+            }
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Script {
     _script: String,
@@ -27,6 +54,15 @@ pub struct Script {
 pub enum Evaluation {
     Pass,
     Fail(Range<usize>, String, Outcome, Outcome),
+}
+
+impl Evaluation {
+    pub fn failed(&self) -> bool {
+        match self {
+            Self::Pass => false,
+            Self::Fail(_, _, _, _) => true,
+        }
+    }
 }
 
 fn read_script<R: Read>(mut reader: R) -> Result<String, Error> {
@@ -108,19 +144,11 @@ impl Script {
         }
     }
 
-    pub fn run(&self) -> Result<Evaluation, Error> {
-        for caeo in self.commands.iter() {
-            println!("Run: {}", caeo.command.cmd_line_string);
-            println!("Lines: {:?}", caeo.range);
-            let outcome = caeo.command.run()?;
-            println!("Outcome: {outcome:?}");
-            if outcome != caeo.expected_outcome {
-                return Ok(Evaluation::Fail(
-                    caeo.range.clone(),
-                    caeo.command.cmd_line_string.clone(),
-                    caeo.expected_outcome.clone(),
-                    outcome,
-                ));
+    pub fn evaluate(&self) -> Result<Evaluation, Error> {
+        for command in self.commands.iter() {
+            let evaluation = command.evaluate()?;
+            if evaluation.failed() {
+                return Ok(evaluation);
             }
         }
         Ok(Evaluation::Pass)

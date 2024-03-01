@@ -69,7 +69,7 @@ fn main() {
     };
     log::info!("Current working directory: {:?}", std::env::current_dir());
 
-    let result = script.run();
+    let evaluation = script.evaluate();
 
     if let Some(tempdir) = tempdir {
         if let Err(err) = tempdir.close() {
@@ -77,7 +77,7 @@ fn main() {
         }
     }
 
-    match result {
+    match evaluation {
         Ok(pass_or_fail) => match pass_or_fail {
             Evaluation::Pass => {
                 if !cli_options.quiet {
