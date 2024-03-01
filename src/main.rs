@@ -4,7 +4,6 @@ mod command;
 mod error;
 mod script;
 
-use crate::script::Evaluation;
 use std::path::PathBuf;
 use structopt::StructOpt;
 use tempdir::TempDir;
@@ -69,7 +68,7 @@ fn main() {
     };
     log::info!("Current working directory: {:?}", std::env::current_dir());
 
-    let evaluation = script.evaluate();
+    let result = script.evaluate();
 
     if let Some(tempdir) = tempdir {
         if let Err(err) = tempdir.close() {
@@ -77,23 +76,15 @@ fn main() {
         }
     }
 
-    match evaluation {
-        Ok(pass_or_fail) => match pass_or_fail {
-            Evaluation::Pass => {
-                if !cli_options.quiet {
-                    println!("{:?}: PASSED", cli_options.script)
-                }
+    match result {
+        Ok(evaluation) => {
+            println!("{:?}: {evaluation}", cli_options.script);
+            if evaluation.failed() {
+                std::process::exit(-2);
             }
-            Evaluation::Fail(range, command, expected, actual) => {
-                println!(
-                    "{:?}: FAILED: {range:?}: {command}\nexpected: {expected:?}\nactual: {actual:?}",
-                    cli_options.script
-                );
-                std::process::exit(-1);
-            }
-        },
+        }
         Err(err) => {
-            println!("Fail: {err}");
+            println!("Error: {err}");
             std::process::exit(-1);
         }
     }
