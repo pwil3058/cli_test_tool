@@ -117,7 +117,7 @@ impl Command {
                     None => std::process::Stdio::null(),
                 };
                 let output_file = match self.redirection_path {
-                    Some(ref path) => std::process::Stdio::from(std::fs::File::open(path)?),
+                    Some(ref path) => std::process::Stdio::from(std::fs::File::create(path)?),
                     None => std::process::Stdio::piped(),
                 };
                 Ok(Outcome::from(
