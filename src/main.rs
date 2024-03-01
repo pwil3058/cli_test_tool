@@ -1,7 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 mod command;
-mod failure;
+mod error;
 mod script;
 
 use crate::script::PassOrFail;

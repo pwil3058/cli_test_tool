@@ -3,24 +3,24 @@
 use std::{error, fmt};
 
 #[derive(Debug)]
-pub enum Failure {
+pub enum Error {
     IOError(std::io::Error),
     Why(&'static str),
 }
 
-impl From<std::io::Error> for Failure {
+impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
-        Failure::IOError(error)
+        Error::IOError(error)
     }
 }
 
-impl From<&'static str> for Failure {
+impl From<&'static str> for Error {
     fn from(str: &'static str) -> Self {
         Self::Why(str)
     }
 }
 
-impl fmt::Display for Failure {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::IOError(err) => write!(f, "IOError: {err}"),
@@ -29,4 +29,4 @@ impl fmt::Display for Failure {
     }
 }
 
-impl error::Error for Failure {}
+impl error::Error for Error {}

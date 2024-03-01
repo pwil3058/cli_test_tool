@@ -8,7 +8,7 @@ use std::path::Path;
 use std::str::FromStr;
 
 use crate::command::{Command, Outcome};
-use crate::failure::Failure;
+use crate::error::Error;
 
 #[derive(Debug)]
 struct CommandAndExpectedOutcome {
@@ -29,7 +29,7 @@ pub enum PassOrFail {
     Fail(Range<usize>, String, Outcome, Outcome),
 }
 
-fn read_script<R: Read>(mut reader: R) -> Result<String, Failure> {
+fn read_script<R: Read>(mut reader: R) -> Result<String, Error> {
     let mut script = String::new();
     match reader.read_to_string(&mut script) {
         Ok(size) => {
@@ -38,13 +38,13 @@ fn read_script<R: Read>(mut reader: R) -> Result<String, Failure> {
         }
         Err(err) => {
             log::error!("Error reading script file: {}", err);
-            Err(Failure::IOError(err))
+            Err(Error::IOError(err))
         }
     }
 }
 
 impl Script {
-    pub fn read<R: Read>(reader: R) -> Result<Self, Failure> {
+    pub fn read<R: Read>(reader: R) -> Result<Self, Error> {
         let script = read_script(reader)?;
         let lines: Vec<&str> = script.split_inclusive('\n').collect();
         let mut commands = Vec::new();
@@ -70,7 +70,7 @@ impl Script {
                                     log::error!(
                                         "Line: {i}: {err} badly formed error code: {trimmed}"
                                     );
-                                    return Err(Failure::from("Badly formed error code"));
+                                    return Err(Error::from("Badly formed error code"));
                                 }
                             }
                         }
@@ -98,17 +98,17 @@ impl Script {
         })
     }
 
-    pub fn read_from(path: &Path) -> Result<Self, Failure> {
+    pub fn read_from(path: &Path) -> Result<Self, Error> {
         match File::open(path) {
             Ok(file) => Self::read(file),
             Err(err) => {
                 log::error!("Error opening script file: {:?}: {}. Aborting.", path, err);
-                Err(Failure::IOError(err))
+                Err(Error::IOError(err))
             }
         }
     }
 
-    pub fn run(&self) -> Result<PassOrFail, Failure> {
+    pub fn run(&self) -> Result<PassOrFail, Error> {
         for caeo in self.commands.iter() {
             println!("Run: {}", caeo.command.cmd_line_string);
             println!("Lines: {:?}", caeo.range);

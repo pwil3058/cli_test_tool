@@ -3,7 +3,7 @@
 use std::convert::From;
 use std::env;
 
-use crate::failure::Failure;
+use crate::error::Error;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Outcome {
@@ -83,16 +83,16 @@ impl Command {
         }
     }
 
-    pub fn run(&self) -> Result<Outcome, Failure> {
+    pub fn run(&self) -> Result<Outcome, Error> {
         match self.cmd_line[0].as_str() {
-            "umask" => Err(Failure::Why("\"umask\" is not available")),
+            "umask" => Err(Error::Why("\"umask\" is not available")),
             "cd" => match self.cmd_line.len() {
                 2 => {
                     env::set_current_dir(&self.cmd_line[1])?;
                     env::set_var("PWD", env::current_dir()?);
                     Ok(Outcome::default())
                 }
-                _ => Err(Failure::Why("expected exactly one argument")),
+                _ => Err(Error::Why("expected exactly one argument")),
             },
             "export" => {
                 for cmd in &self.cmd_line[1..] {
@@ -100,7 +100,7 @@ impl Command {
                     if pair.len() == 2 {
                         env::set_var(pair[0], pair[1]);
                     } else {
-                        return Err(Failure::Why("expected \"ARG=VALUE\""));
+                        return Err(Error::Why("expected \"ARG=VALUE\""));
                     }
                 }
                 Ok(Outcome::default())
