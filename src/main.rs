@@ -4,7 +4,7 @@ mod command;
 mod error;
 mod script;
 
-use crate::script::PassOrFail;
+use crate::script::Evaluation;
 use std::path::PathBuf;
 use structopt::StructOpt;
 use tempdir::TempDir;
@@ -79,12 +79,12 @@ fn main() {
 
     match result {
         Ok(pass_or_fail) => match pass_or_fail {
-            PassOrFail::Pass => {
+            Evaluation::Pass => {
                 if !cli_options.quiet {
                     println!("{:?}: PASSED", cli_options.script)
                 }
             }
-            PassOrFail::Fail(range, command, expected, actual) => {
+            Evaluation::Fail(range, command, expected, actual) => {
                 println!(
                     "{:?}: FAILED: {range:?}: {command}\nexpected: {expected:?}\nactual: {actual:?}",
                     cli_options.script

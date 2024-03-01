@@ -24,7 +24,7 @@ pub struct Script {
 }
 
 #[derive(Debug)]
-pub enum PassOrFail {
+pub enum Evaluation {
     Pass,
     Fail(Range<usize>, String, Outcome, Outcome),
 }
@@ -108,14 +108,14 @@ impl Script {
         }
     }
 
-    pub fn run(&self) -> Result<PassOrFail, Error> {
+    pub fn run(&self) -> Result<Evaluation, Error> {
         for caeo in self.commands.iter() {
             println!("Run: {}", caeo.command.cmd_line_string);
             println!("Lines: {:?}", caeo.range);
             let outcome = caeo.command.run()?;
             println!("Outcome: {outcome:?}");
             if outcome != caeo.expected_outcome {
-                return Ok(PassOrFail::Fail(
+                return Ok(Evaluation::Fail(
                     caeo.range.clone(),
                     caeo.command.cmd_line_string.clone(),
                     caeo.expected_outcome.clone(),
@@ -123,6 +123,6 @@ impl Script {
                 ));
             }
         }
-        Ok(PassOrFail::Pass)
+        Ok(Evaluation::Pass)
     }
 }
