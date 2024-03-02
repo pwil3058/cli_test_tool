@@ -67,6 +67,9 @@ impl fmt::Display for Evaluation {
                         } else {
                             write!(f, "\tExpected Error Code {e_e_code} got \"killed\"")?;
                         }
+                    } else {
+                        let a_e_code = actual.e_code.expect("Should NOT be None");
+                        write!(f, "\tExpected Error Code \"killed\" got {a_e_code}")?;
                     }
                 }
                 if expected.std_out != actual.std_out {
