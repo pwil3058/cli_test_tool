@@ -77,6 +77,9 @@ fn main() {
     match result {
         Ok(evaluation) => {
             println!("{evaluation}");
+            if evaluation.failed() {
+                std::process::exit(1);
+            }
         }
         Err(err) => {
             writeln!(io::stderr(), "Error: script evaluation failed: {err}")
