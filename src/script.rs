@@ -105,7 +105,6 @@ impl Script {
             if let Some(stripped) = line.strip_prefix('$') {
                 let command = Command::new(stripped)?;
                 let mut expected_outcome = Outcome::default();
-                println!("{:?}", command);
                 let start = i;
                 i += 1;
                 while let Some(line) = lines.get(i) {
@@ -118,7 +117,6 @@ impl Script {
                         } else {
                             expected_outcome.e_code = Some(i32::from_str(trimmed)?);
                         }
-                        println!("expected e_code: {:?}", expected_outcome.e_code);
                     } else if let Some(trimmed) = line.strip_prefix('!') {
                         expected_outcome.std_err.push_str(trimmed.trim_start());
                     } else if let Some(trimmed) = line.strip_prefix('>') {
@@ -149,7 +147,6 @@ impl Script {
     pub fn evaluate(&self) -> Result<Evaluation, Error> {
         for command in self.commands.iter() {
             let evaluation = command.evaluate()?;
-            println!("Evalution: {evaluation}");
             if evaluation.failed() {
                 return Ok(evaluation);
             }

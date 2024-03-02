@@ -39,7 +39,7 @@ fn main() {
         }
     };
     if cli_options.verbose > 3 {
-        println!("NEW: {script:?}");
+        println!("Script: {script:?}");
     }
 
     let tempdir = if cli_options.use_temp_dir {
@@ -79,7 +79,8 @@ fn main() {
             println!("{evaluation}");
         }
         Err(err) => {
-            println!("Error: script evaluation failed: {err}");
+            writeln!(io::stderr(), "Error: script evaluation failed: {err}")
+                .expect("stderr failed");
             std::process::exit(-1);
         }
     }
