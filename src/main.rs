@@ -20,9 +20,9 @@ struct CLIOptions {
     #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
     verbose: usize,
     /// Timestamp (sec, ms, ns, none)
-    /// Run test in a clean temporary directory
+    /// Do not un test in a clean temporary directory
     #[structopt(short, long)]
-    use_temp_dir: bool,
+    no_temp_dir: bool,
     /// The name/path of the file containing the test script
     #[structopt(required = true)]
     script: PathBuf,
@@ -42,7 +42,9 @@ fn main() {
         println!("Script: {script:?}");
     }
 
-    let tempdir = if cli_options.use_temp_dir {
+    let tempdir = if cli_options.no_temp_dir {
+        None
+    } else {
         match TempDir::new("cli_test") {
             Ok(tempdir) => {
                 if let Err(err) = std::env::set_current_dir(tempdir.path()) {
@@ -62,8 +64,6 @@ fn main() {
                 std::process::exit(-1);
             }
         }
-    } else {
-        None
     };
 
     let result = script.evaluate();

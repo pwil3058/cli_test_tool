@@ -42,6 +42,9 @@ If the test succeeds then the return value will be 0 and otherwise 1.
 Any other return value indicates that the program failed without evaluating
 the test script.
 
+By default, the test will be run in a clean temporary directory. This can be overridden
+using the -n option.
+
 #Usage:
 
 ```
@@ -56,5 +59,5 @@ optional arguments:
   -h, --help     show this help message and exit
   -q, --quiet    operate in quiet mode.
   -v, --verbose  operate in verbose mode.
-  -t, --tempdir  run the test script in a clean temporary directory.
+  -n, --no_temp_dir  do not run the test script in a clean temporary directory.
 ```
