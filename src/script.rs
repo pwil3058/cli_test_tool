@@ -35,7 +35,6 @@ impl CommandAndExpectedOutcome {
 
 #[derive(Debug, Default)]
 pub struct Script {
-    _script: String,
     commands: Vec<CommandAndExpectedOutcome>,
 }
 
@@ -137,10 +136,7 @@ impl Script {
                 i += 1
             }
         }
-        Ok(Self {
-            _script: script,
-            commands,
-        })
+        Ok(Self { commands })
     }
 
     pub fn read_from(path: &Path) -> Result<Self, Error> {
