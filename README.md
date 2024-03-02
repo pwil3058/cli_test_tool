@@ -7,10 +7,10 @@ files specifying commands to be run and the expected output.
 Lines that begin with a "$" are interpreted as a command to be run.
 
 Lines following $ lines that begin with a ">" are interpreted as the expected output on
-the commands stdout.
+the command's stdout.
 
 Lines following $ lines that begin with a "!" are interpreted as the expected output on
-the commands stderr.
+the command's stderr.
 
 Lines following $ lines that begin with a "?" are expected to contain an integer that is
 the expected return value for the command.
