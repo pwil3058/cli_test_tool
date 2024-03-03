@@ -107,7 +107,8 @@ impl Script {
             if let Some(stripped) = line.strip_prefix('$') {
                 let command = Command::new(stripped)?;
                 let mut expected_outcome = Outcome::default();
-                let start = i;
+                // line numbers start at 1
+                let start = i + 1;
                 i += 1;
                 while let Some(line) = lines.get(i) {
                     if line.starts_with('$') {
@@ -126,7 +127,8 @@ impl Script {
                     }
                     i += 1;
                 }
-                let range = Range { start, end: i };
+                // line numbers start at 1
+                let range = Range { start, end: i + 1 };
                 commands.push(CommandAndExpectedOutcome {
                     command,
                     expected_outcome,
