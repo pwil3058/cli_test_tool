@@ -1,5 +1,20 @@
 $ ls > /dev/null
-$ cd ..
-? 0
-> whatever
-
+$ ls
+$ touch touched
+$ ls
+> touched
+$ ls -a
+> .
+> ..
+> touched
+$ echo "quite a long string" > echoed
+$ ls
+> echoed
+> touched
+$ cat echoed
+> quite a long string
+$ mkdir dir
+$ cd dir
+$ ls -a
+> .
+> ..
