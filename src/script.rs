@@ -1,5 +1,7 @@
 // Copyright 2024 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+use std::collections::HashMap;
+use std::ffi::OsString;
 use std::fmt;
 use std::fs::File;
 use std::io::Read;
@@ -18,8 +20,11 @@ struct CommandAndExpectedOutcome {
 }
 
 impl CommandAndExpectedOutcome {
-    pub fn evaluate(&self) -> Result<Evaluation, Error> {
-        let outcome = self.command.run()?;
+    pub fn evaluate(
+        &self,
+        env_vars: &mut HashMap<OsString, OsString>,
+    ) -> Result<Evaluation, Error> {
+        let outcome = self.command.run(env_vars)?;
         if outcome == self.expected_outcome {
             Ok(Evaluation::Pass)
         } else {
@@ -146,8 +151,12 @@ impl Script {
     }
 
     pub fn evaluate(&self) -> Result<Evaluation, Error> {
+        let mut env_vars: HashMap<OsString, OsString> = std::env::vars()
+            .filter(|(k, _)| k == "TERM" || k == "TZ" || k == "LANG" || k == "PATH")
+            .map(|(ref k, ref v)| (k.into(), v.into()))
+            .collect();
         for command in self.commands.iter() {
-            let evaluation = command.evaluate()?;
+            let evaluation = command.evaluate(&mut env_vars)?;
             if evaluation.failed() {
                 return Ok(evaluation);
             }

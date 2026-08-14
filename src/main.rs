@@ -68,10 +68,10 @@ fn main() {
 
     let result = script.evaluate();
 
-    if let Some(tempdir) = tempdir {
-        if let Err(err) = tempdir.close() {
-            writeln!(io::stderr(), "Error: tempdir.close() failed: {err}").expect("stderr failed");
-        }
+    if let Some(tempdir) = tempdir
+        && let Err(err) = tempdir.close()
+    {
+        writeln!(io::stderr(), "Error: tempdir.close() failed: {err}").expect("stderr failed");
     }
 
     match result {

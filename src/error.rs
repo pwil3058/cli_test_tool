@@ -5,14 +5,14 @@ use std::{error, fmt};
 
 #[derive(Debug)]
 pub enum Error {
-    IOError(std::io::Error),
+    IO(std::io::Error),
     MalformedErrorCode(ParseIntError),
     Why(&'static str),
 }
 
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
-        Error::IOError(error)
+        Error::IO(error)
     }
 }
 
@@ -31,7 +31,7 @@ impl From<&'static str> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::IOError(err) => write!(f, "IOError: {err}"),
+            Self::IO(err) => write!(f, "IOError: {err}"),
             Self::MalformedErrorCode(err) => write!(f, "Malformed Error Code: {err}"),
             Self::Why(reason) => write!(f, "Error: {reason}"),
         }
