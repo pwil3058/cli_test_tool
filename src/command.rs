@@ -1,10 +1,10 @@
 // Copyright 2022 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::error::Error;
-use std::collections::HashMap;
 use std::convert::From;
 use std::env;
-use std::ffi::OsString;
+
+use crate::script::EnvVars;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Outcome {
@@ -84,14 +84,14 @@ impl Command {
         }
     }
 
-    pub fn run(&self, env_vars: &mut HashMap<OsString, OsString>) -> Result<Outcome, Error> {
+    pub fn run(&self, env_vars: &mut EnvVars) -> Result<Outcome, Error> {
         match self.cmd_line[0].as_str() {
             "umask" => Err(Error::Why("\"umask\" is not available")),
             "cd" => match self.cmd_line.len() {
                 2 => {
                     env::set_current_dir(&self.cmd_line[1])?;
                     // env::set_var("PWD", env::current_dir()?);
-                    let _ = env_vars.insert("PWD".into(), env::current_dir()?.into());
+                    let _ = env_vars.set_var("PWD", &env::current_dir()?.to_string_lossy());
                     Ok(Outcome::default())
                 }
                 _ => Err(Error::Why("expected exactly one argument")),
@@ -101,7 +101,7 @@ impl Command {
                     let pair: Vec<&str> = cmd.as_str().split('=').collect();
                     if pair.len() == 2 {
                         // env::set_var(pair[0], pair[1]);
-                        let _ = env_vars.insert(pair[0].into(), pair[1].into());
+                        let _ = env_vars.set_var(pair[0].into(), pair[1].into());
                     } else {
                         return Err(Error::Why("expected \"ARG=VALUE\""));
                     }
@@ -111,8 +111,8 @@ impl Command {
             "unset" => {
                 for var in &self.cmd_line[1..] {
                     // env::remove_var(var);
-                    let os_var = OsString::from(var);
-                    let _ = env_vars.remove(&os_var);
+                    // let os_var = OsString::from(var);
+                    let _ = env_vars.remove_var(var);
                 }
                 Ok(Outcome::default())
             }
@@ -130,7 +130,7 @@ impl Command {
                         .args(&self.cmd_line[1..])
                         .stdin(input_file)
                         .stdout(output_file)
-                        .envs(env_vars)
+                        .envs(&env_vars.0)
                         .output()?,
                 ))
             }

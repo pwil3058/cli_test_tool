@@ -1,7 +1,6 @@
 // Copyright 2024 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use std::collections::HashMap;
-use std::ffi::OsString;
 use std::fmt;
 use std::fs::File;
 use std::io::Read;
@@ -13,6 +12,27 @@ use crate::command::{Command, Outcome};
 use crate::error::Error;
 
 #[derive(Debug)]
+pub struct EnvVars(pub HashMap<String, String>);
+
+impl EnvVars {
+    fn new() -> Self {
+        let env_vars: HashMap<String, String> = std::env::vars()
+            .filter(|(k, _)| k == "TZ" || k == "LANG" || k == "PATH" || k == "PWD" || k == "HOME")
+            .map(|(ref k, ref v)| (k.into(), v.into()))
+            .collect();
+        EnvVars(env_vars)
+    }
+
+    pub fn set_var(&mut self, key: &str, value: &str) {
+        self.0.insert(key.to_string(), value.to_string());
+    }
+
+    pub fn remove_var(&mut self, key: &str) {
+        self.0.remove(key);
+    }
+}
+
+#[derive(Debug)]
 struct CommandAndExpectedOutcome {
     command: Command,
     expected_outcome: Outcome,
@@ -20,10 +40,7 @@ struct CommandAndExpectedOutcome {
 }
 
 impl CommandAndExpectedOutcome {
-    pub fn evaluate(
-        &self,
-        env_vars: &mut HashMap<OsString, OsString>,
-    ) -> Result<Evaluation, Error> {
+    pub fn evaluate(&self, env_vars: &mut EnvVars) -> Result<Evaluation, Error> {
         let outcome = self.command.run(env_vars)?;
         if outcome == self.expected_outcome {
             Ok(Evaluation::Pass)
@@ -151,10 +168,7 @@ impl Script {
     }
 
     pub fn evaluate(&self) -> Result<Evaluation, Error> {
-        let mut env_vars: HashMap<OsString, OsString> = std::env::vars()
-            .filter(|(k, _)| k == "TERM" || k == "TZ" || k == "LANG" || k == "PATH")
-            .map(|(ref k, ref v)| (k.into(), v.into()))
-            .collect();
+        let mut env_vars = EnvVars::new();
         for command in self.commands.iter() {
             let evaluation = command.evaluate(&mut env_vars)?;
             if evaluation.failed() {
