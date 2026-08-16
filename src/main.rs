@@ -2,6 +2,7 @@
 
 mod command;
 mod error;
+mod parse;
 mod script;
 
 use std::io::{self, Write};

@@ -85,6 +85,16 @@ impl Command {
     }
 
     pub fn run(&self, env_vars: &mut EnvVars) -> Result<Outcome, Error> {
+        if self.cmd_line[0].find("=").is_some() {
+            let pair: Vec<&str> = self.cmd_line[0].as_str().split('=').collect();
+            if pair.len() == 2 {
+                // env::set_var(pair[0], pair[1]);
+                let _ = env_vars.set_var(pair[0].into(), pair[1].into());
+            } else {
+                return Err(Error::Why("expected \"ARG=VALUE\""));
+            }
+            return Ok(Outcome::default());
+        }
         match self.cmd_line[0].as_str() {
             "umask" => Err(Error::Why("\"umask\" is not available")),
             "cd" => match self.cmd_line.len() {
@@ -96,18 +106,6 @@ impl Command {
                 }
                 _ => Err(Error::Why("expected exactly one argument")),
             },
-            "export" => {
-                for cmd in &self.cmd_line[1..] {
-                    let pair: Vec<&str> = cmd.as_str().split('=').collect();
-                    if pair.len() == 2 {
-                        // env::set_var(pair[0], pair[1]);
-                        let _ = env_vars.set_var(pair[0].into(), pair[1].into());
-                    } else {
-                        return Err(Error::Why("expected \"ARG=VALUE\""));
-                    }
-                }
-                Ok(Outcome::default())
-            }
             "unset" => {
                 for var in &self.cmd_line[1..] {
                     // env::remove_var(var);
@@ -140,10 +138,36 @@ impl Command {
 
 #[cfg(test)]
 mod command_tests {
-    use crate::command::Command;
+    use crate::command::{Command, Outcome};
+    use crate::script::EnvVars;
 
     #[test]
     fn new_command() {
-        println!("{:?}", Command::new("whatever x y < bbb > aaa"))
+        let cmd = Command::new("whatever x y < bbb > aaa").unwrap();
+        println!("{:?}", cmd);
+        assert_eq!(cmd.cmd_line[0], "whatever");
+        assert_eq!(cmd.cmd_line[1..], ["x", "y"]);
+        assert_eq!(cmd.input_path, Some("bbb".to_string()));
+        assert_eq!(cmd.redirection_path, Some("aaa".to_string()));
+        let env_vars = &mut EnvVars::new();
+        let result = cmd.run(env_vars).unwrap_err().to_string();
+        assert_eq!(result, "IOError: No such file or directory (os error 2)");
+    }
+
+    #[test]
+    fn set_var_test() {
+        let cmd = Command::new("MYNAME=Peter").unwrap();
+        let env_vars = &mut EnvVars::new();
+        let result = cmd.run(env_vars);
+        println!("{:?}", result);
+        assert_eq!(
+            result.unwrap(),
+            Outcome {
+                e_code: Some(0),
+                std_out: "".to_string(),
+                std_err: "".to_string(),
+            }
+        );
+        assert_eq!(env_vars.var("MYNAME").unwrap(), "Peter");
     }
 }

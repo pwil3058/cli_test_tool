@@ -1,0 +1,101 @@
+%{
+
+use lalr1;
+use lexan;
+
+#[allow(dead_code)]
+#[derive(Debug, Default)]
+pub enum Command {
+    SetEnvVar(String, String),
+    #[default]
+    Default,
+}
+
+#[cfg(test)]
+pub mod parser_tests;
+
+impl lalr1::ReportError<AATerminal> for Command {}
+
+#[allow(dead_code)]
+#[derive(Debug, Default, Clone)]
+pub enum AttributeData {
+    Token(lexan::Token<AATerminal>),
+    Error(lalr1::Error<AATerminal>),
+    String(String),
+    Id(String),
+    SetEnvVar(String, String),
+    #[default]
+    Default
+}
+
+impl AttributeData {
+    fn string(&self) -> &String {
+        match self {
+            Self::String(string) => string,
+            _ => panic!("Invalid AttributeData variant")
+        }
+    }
+
+    fn id(&self) -> &String {
+        match self {
+            Self::Id(string) => string,
+            _ => panic!("Invalid AttributeData variant")
+        }
+    }
+
+    fn set_env_var(&self) -> (&String, &String) {
+        match self {
+            Self::SetEnvVar(var, value) => (var, value),
+            _ => panic!("Invalid AttributeData variant")
+        }
+    }
+}
+
+impl From<lexan::Token<AATerminal>> for AttributeData {
+    fn from(input: lexan::Token<AATerminal>) -> Self {
+        match input.tag() {
+            AATerminal::STRING => AttributeData::String(input.lexeme().to_string()),
+            AATerminal::ID => AttributeData::Id(input.lexeme().to_string()),
+            _ => AttributeData::Token(input.clone())
+        }
+    }
+}
+
+impl From<lalr1::Error<AATerminal>> for AttributeData {
+    fn from(error: lalr1::Error<AATerminal>) -> Self {
+        AttributeData::Error(error.clone())
+    }
+}
+
+%}
+
+%attr AttributeData
+%target Command
+
+%%
+
+%token  EOL     (\n)
+%token  STRING  ("(\\"|[^"\t\r\n\v\f])+")
+%token  ID      ([\w\d._\-/:]+)
+%token  WS      ([ \t]+)
+%token  ASSIGN  "="
+%token  UNSET   "unset"
+
+%%
+
+Command: STRING WS ID !{ println!("{:?} {:?}", $1.string(), $3.id()); !}
+    | SetEnvVar !{
+        let (var, value) = $1.set_env_var();
+        *self = Command::SetEnvVar(var.to_string(), value.to_string());
+    !}
+    | UnsetEnvVar
+    .
+
+SetEnvVar: ID ASSIGN STRING
+        !{
+            println!("ASSIGNMENT"); $$ = AttributeData::SetEnvVar($1.id().to_string(), $3.string().to_string());
+         !}
+    | ID ASSIGN ID !{ println!("ASSIGNMENT"); $$ = AttributeData::SetEnvVar($1.id().to_string(), $3.id().to_string()); !}
+    .
+
+UnsetEnvVar: UNSET WS ID .

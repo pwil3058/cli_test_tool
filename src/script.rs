@@ -15,12 +15,16 @@ use crate::error::Error;
 pub struct EnvVars(pub HashMap<String, String>);
 
 impl EnvVars {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let env_vars: HashMap<String, String> = std::env::vars()
             .filter(|(k, _)| k == "TZ" || k == "LANG" || k == "PATH" || k == "PWD" || k == "HOME")
             .map(|(ref k, ref v)| (k.into(), v.into()))
             .collect();
         EnvVars(env_vars)
+    }
+
+    pub fn var(&self, key: &str) -> Option<&String> {
+        self.0.get(key)
     }
 
     pub fn set_var(&mut self, key: &str, value: &str) {
