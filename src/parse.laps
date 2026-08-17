@@ -4,10 +4,11 @@ use lalr1;
 use lexan;
 
 #[allow(dead_code)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub enum CommandAction {
     SetEnvVar(String, String),
-    UnsetVar(String),
+    UnsetEnvVar(String),
+    RunProgram(String, Vec<String>, Option<String>, Option<String>, Option<String>),
     #[default]
     Default,
 }
@@ -71,6 +72,8 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 %attr AttributeData
 %target Command
 
+%reduce_reduce 1
+
 %%
 
 %token  EOL     (\n)
@@ -85,19 +88,21 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 
 Command:
     ID "=" ID !{
-        println!("SetEnvar: {:?} {:?} {:?}", $1, $2, $3);
-        let var = $1.id();
-        let value = $3.id();
-        self.action = CommandAction::SetEnvVar(var, value);
+        self.action = CommandAction::SetEnvVar($1.id(), $3.id());
     !}
     | ID "=" STRING !{
-        println!("SetEnvar: {:?} {:?} {:?}", $1, $2, $3);
-        let var = $1.id();
-        let value = $3.string();
-        self.action = CommandAction::SetEnvVar(var, value);
+        self.action = CommandAction::SetEnvVar($1.id(), $3.string());
     !}
     | "unset" ID !{
-        println!("UnsetVar: {:?}", $2);
-        self.action = CommandAction::UnsetVar($2.id())
+        self.action = CommandAction::UnsetEnvVar($2.id());
+    !}
+    | ID !{
+        self.action = CommandAction::RunProgram($1.id(), vec![], None, None, None);
+    !}
+    | ID Args !{
     !}
     .
+Args: !{!}
+    | Args Arg
+    .
+Arg: ID | STRING.
