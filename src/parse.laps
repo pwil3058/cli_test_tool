@@ -83,8 +83,8 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 
 %%
 
-Command: STRING ID !{ println!("{:?} {:?}", $1, $2); !}
-    | ID "=" ID !{
+Command:
+    ID "=" ID !{
         println!("SetEnvar: {:?} {:?} {:?}", $1, $2, $3);
         let var = $1.id();
         let value = $3.id();

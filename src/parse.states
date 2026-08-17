@@ -7,12 +7,11 @@ Symbols:
     STRING(("(\\"|[^"\t\r\n\v\f])+")): #(NonAssoc, 0)
     UNSET("unset"): #(NonAssoc, 0)
   Non Terminal Symbols:
-    AAStart: TokenSet{"unset", ID, STRING}:(false)
-    Command: TokenSet{"unset", ID, STRING}:(false)
+    AAStart: TokenSet{"unset", ID}:(false)
+    Command: TokenSet{"unset", ID}:(false)
 
 Productions:
   AAStart: Command #(NonAssoc, 0)
-  Command: STRING ID #(NonAssoc, 0)
   Command: ID "=" ID #(NonAssoc, 0)
   Command: ID "=" STRING #(NonAssoc, 0)
   Command: "unset" ID #(NonAssoc, 0)
@@ -20,15 +19,13 @@ Productions:
 State<0>:
   Grammar Items:
     AAStart: . Command #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: . STRING ID #(NonAssoc, 0): TokenSet{AAEnd}
     Command: . ID "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
     Command: . ID "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
     Command: . "unset" ID #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
-      "unset" -> State<4>
-      ID -> State<3>
-      STRING -> State<2>
+      "unset" -> State<3>
+      ID -> State<2>
   Go To Table:
     Command -> State<1>
   Error Recovery State: <none>
@@ -45,7 +42,18 @@ State<1>:
 
 State<2>:
   Grammar Items:
-    Command: STRING . ID #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: ID . "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: ID . "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
+  Parser Action Table:
+    Shifts:
+      "=" -> State<4>
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<3>:
+  Grammar Items:
+    Command: "unset" . ID #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
       ID -> State<5>
@@ -53,50 +61,19 @@ State<2>:
     <empty>
   Error Recovery State: <none>
 
-State<3>:
-  Grammar Items:
-    Command: ID . "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: ID . "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
-  Parser Action Table:
-    Shifts:
-      "=" -> State<6>
-  Go To Table:
-    <empty>
-  Error Recovery State: <none>
-
 State<4>:
-  Grammar Items:
-    Command: "unset" . ID #(NonAssoc, 0): TokenSet{AAEnd}
-  Parser Action Table:
-    Shifts:
-      ID -> State<7>
-  Go To Table:
-    <empty>
-  Error Recovery State: <none>
-
-State<5>:
-  Grammar Items:
-    Command: STRING ID .  #(NonAssoc, 0): TokenSet{AAEnd}
-  Parser Action Table:
-    Reductions:
-      AAEnd: reduce Command: STRING ID #(NonAssoc, 0)
-  Go To Table:
-    <empty>
-  Error Recovery State: <none>
-
-State<6>:
   Grammar Items:
     Command: ID "=" . ID #(NonAssoc, 0): TokenSet{AAEnd}
     Command: ID "=" . STRING #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
-      ID -> State<8>
-      STRING -> State<9>
+      ID -> State<6>
+      STRING -> State<7>
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
-State<7>:
+State<5>:
   Grammar Items:
     Command: "unset" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
@@ -106,7 +83,7 @@ State<7>:
     <empty>
   Error Recovery State: <none>
 
-State<8>:
+State<6>:
   Grammar Items:
     Command: ID "=" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
@@ -116,7 +93,7 @@ State<8>:
     <empty>
   Error Recovery State: <none>
 
-State<9>:
+State<7>:
   Grammar Items:
     Command: ID "=" STRING .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
