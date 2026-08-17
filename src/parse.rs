@@ -90,7 +90,6 @@ pub enum AATerminal {
     ID,
     STRING,
     UNSET,
-    WS,
 }
 
 impl std::fmt::Display for AATerminal {
@@ -102,7 +101,6 @@ impl std::fmt::Display for AATerminal {
             AATerminal::ID => write!(f, r###"ID"###),
             AATerminal::STRING => write!(f, r###"STRING"###),
             AATerminal::UNSET => write!(f, r###""unset""###),
-            AATerminal::WS => write!(f, r###"WS"###),
         }
     }
 }
@@ -117,11 +115,11 @@ lazy_static::lazy_static! {
             ],
             &[
                 (STRING, r###"("(\\"|[^"\t\r\n\v\f])+")"###),
-                (WS, r###"([ \t]+)"###),
                 (ID, r###"([\w\d._\-/:]+)"###),
                 (EOL, r###"(\n)"###),
             ],
             &[
+                r###"([ \t]+)"###,
             ],
             AAEnd,
         )
@@ -157,16 +155,14 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
         return match state {
             0 => btree_set![UNSET, ID, STRING],
             1 => btree_set![AAEnd],
-            2 => btree_set![WS],
+            2 => btree_set![ID],
             3 => btree_set![ASSIGN],
-            4 => btree_set![WS],
-            5 => btree_set![ID],
+            4 => btree_set![ID],
+            5 => btree_set![AAEnd],
             6 => btree_set![ID, STRING],
-            7 => btree_set![ID],
+            7 => btree_set![AAEnd],
             8 => btree_set![AAEnd],
             9 => btree_set![AAEnd],
-            10 => btree_set![AAEnd],
-            11 => btree_set![AAEnd],
             _ => panic!("illegal state: {state}"),
         };
     }
@@ -188,7 +184,7 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
                 _ => Action::SyntaxError,
             },
             2 => match aa_tag {
-                WS => Action::Shift(5),
+                ID => Action::Shift(5),
                 _ => Action::SyntaxError,
             },
             3 => match aa_tag {
@@ -196,40 +192,32 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
                 _ => Action::SyntaxError,
             },
             4 => match aa_tag {
-                WS => Action::Shift(7),
+                ID => Action::Shift(7),
                 _ => Action::SyntaxError,
             },
             5 => match aa_tag {
-                ID => Action::Shift(8),
-                _ => Action::SyntaxError,
-            },
-            6 => match aa_tag {
-                ID => Action::Shift(9),
-                STRING => Action::Shift(10),
-                _ => Action::SyntaxError,
-            },
-            7 => match aa_tag {
-                ID => Action::Shift(11),
-                _ => Action::SyntaxError,
-            },
-            8 => match aa_tag {
-                // Command: STRING WS ID #(NonAssoc, 0)
+                // Command: STRING ID #(NonAssoc, 0)
                 AAEnd => Action::Reduce(1),
                 _ => Action::SyntaxError,
             },
-            9 => match aa_tag {
+            6 => match aa_tag {
+                ID => Action::Shift(8),
+                STRING => Action::Shift(9),
+                _ => Action::SyntaxError,
+            },
+            7 => match aa_tag {
+                // Command: "unset" ID #(NonAssoc, 0)
+                AAEnd => Action::Reduce(4),
+                _ => Action::SyntaxError,
+            },
+            8 => match aa_tag {
                 // Command: ID "=" ID #(NonAssoc, 0)
                 AAEnd => Action::Reduce(2),
                 _ => Action::SyntaxError,
             },
-            10 => match aa_tag {
+            9 => match aa_tag {
                 // Command: ID "=" STRING #(NonAssoc, 0)
                 AAEnd => Action::Reduce(3),
-                _ => Action::SyntaxError,
-            },
-            11 => match aa_tag {
-                // Command: "unset" WS ID #(NonAssoc, 0)
-                AAEnd => Action::Reduce(4),
                 _ => Action::SyntaxError,
             },
             _ => panic!("illegal state: {aa_state}"),
@@ -239,10 +227,10 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
     fn production_data(production_id: u32) -> (AANonTerminal, usize) {
         match production_id {
             0 => (AANonTerminal::AAStart, 1),
-            1 => (AANonTerminal::Command, 3),
+            1 => (AANonTerminal::Command, 2),
             2 => (AANonTerminal::Command, 3),
             3 => (AANonTerminal::Command, 3),
-            4 => (AANonTerminal::Command, 3),
+            4 => (AANonTerminal::Command, 2),
             _ => panic!("malformed production data table"),
         }
     }
@@ -270,8 +258,8 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
         };
         match aa_production_id {
             1 => {
-                // Command: STRING WS ID #(NonAssoc, 0)
-                println!("{:?} {:?}", aa_rhs[0], aa_rhs[2]);
+                // Command: STRING ID #(NonAssoc, 0)
+                println!("{:?} {:?}", aa_rhs[0], aa_rhs[1]);
             }
             2 => {
                 // Command: ID "=" ID #(NonAssoc, 0)
@@ -290,10 +278,10 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
                 self.action = CommandAction::SetEnvVar(var, value);
             }
             4 => {
-                // Command: "unset" WS ID #(NonAssoc, 0)
+                // Command: "unset" ID #(NonAssoc, 0)
 
-                println!("UnsetVar: {:?}", aa_rhs[2]);
-                self.action = CommandAction::UnsetVar(aa_rhs[2].id())
+                println!("UnsetVar: {:?}", aa_rhs[1]);
+                self.action = CommandAction::UnsetVar(aa_rhs[1].id())
             }
             _ => aa_inject(String::new(), String::new()),
         };

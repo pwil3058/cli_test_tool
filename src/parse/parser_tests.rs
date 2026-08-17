@@ -7,4 +7,5 @@ fn test_command_parse() {
     assert!(command.parse_text("\"nothing\" something", "label").is_ok());
     assert!(command.parse_text("PATH=/usr/bin:/bin", "label").is_ok());
     assert!(command.parse_text("unset WHATEVER", "label").is_ok());
+    assert!("\"target".starts_with('"'));
 }

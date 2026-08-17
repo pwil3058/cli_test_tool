@@ -76,27 +76,28 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 %token  EOL     (\n)
 %token  STRING  ("(\\"|[^"\t\r\n\v\f])+")
 %token  ID      ([\w\d._\-/:]+)
-%token  WS      ([ \t]+)
 %token  ASSIGN  "="
 %token  UNSET   "unset"
 
+%skip ([ \t]+)
+
 %%
 
-Command: STRING WS ID !{ println!("{:?} {:?}", $1, $3); !}
-    | ID ASSIGN ID !{
+Command: STRING ID !{ println!("{:?} {:?}", $1, $2); !}
+    | ID "=" ID !{
         println!("SetEnvar: {:?} {:?} {:?}", $1, $2, $3);
         let var = $1.id();
         let value = $3.id();
         self.action = CommandAction::SetEnvVar(var, value);
     !}
-    | ID ASSIGN STRING !{
+    | ID "=" STRING !{
         println!("SetEnvar: {:?} {:?} {:?}", $1, $2, $3);
         let var = $1.id();
         let value = $3.string();
         self.action = CommandAction::SetEnvVar(var, value);
     !}
-    | UNSET WS ID !{
-        println!("UnsetVar: {:?}", $3);
-        self.action = CommandAction::UnsetVar($3.id())
+    | "unset" ID !{
+        println!("UnsetVar: {:?}", $2);
+        self.action = CommandAction::UnsetVar($2.id())
     !}
     .
