@@ -5,10 +5,17 @@ use lexan;
 
 #[allow(dead_code)]
 #[derive(Debug, Default)]
-pub enum Command {
+pub enum CommandAction {
     SetEnvVar(String, String),
+    UnsetVar(String),
     #[default]
     Default,
+}
+
+#[derive(Debug, Default)]
+pub struct Command {
+    pub string: String,
+    pub action: CommandAction
 }
 
 #[cfg(test)]
@@ -23,29 +30,21 @@ pub enum AttributeData {
     Error(lalr1::Error<AATerminal>),
     String(String),
     Id(String),
-    SetEnvVar(String, String),
     #[default]
     Default
 }
 
 impl AttributeData {
-    fn string(&self) -> &String {
+    fn string(&self) -> String {
         match self {
-            Self::String(string) => string,
+            Self::String(string) => string.clone(),
             _ => panic!("Invalid AttributeData variant")
         }
     }
 
-    fn id(&self) -> &String {
+    fn id(&self) -> String {
         match self {
-            Self::Id(string) => string,
-            _ => panic!("Invalid AttributeData variant")
-        }
-    }
-
-    fn set_env_var(&self) -> (&String, &String) {
-        match self {
-            Self::SetEnvVar(var, value) => (var, value),
+            Self::Id(string) => string.clone(),
             _ => panic!("Invalid AttributeData variant")
         }
     }
@@ -83,19 +82,21 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 
 %%
 
-Command: STRING WS ID !{ println!("{:?} {:?}", $1.string(), $3.id()); !}
-    | SetEnvVar !{
-        let (var, value) = $1.set_env_var();
-        *self = Command::SetEnvVar(var.to_string(), value.to_string());
+Command: STRING WS ID !{ println!("{:?} {:?}", $1, $3); !}
+    | ID ASSIGN ID !{
+        println!("SetEnvar: {:?} {:?} {:?}", $1, $2, $3);
+        let var = $1.id();
+        let value = $3.id();
+        self.action = CommandAction::SetEnvVar(var, value);
     !}
-    | UnsetEnvVar
+    | ID ASSIGN STRING !{
+        println!("SetEnvar: {:?} {:?} {:?}", $1, $2, $3);
+        let var = $1.id();
+        let value = $3.string();
+        self.action = CommandAction::SetEnvVar(var, value);
+    !}
+    | UNSET WS ID !{
+        println!("UnsetVar: {:?}", $3);
+        self.action = CommandAction::UnsetVar($3.id())
+    !}
     .
-
-SetEnvVar: ID ASSIGN STRING
-        !{
-            println!("ASSIGNMENT"); $$ = AttributeData::SetEnvVar($1.id().to_string(), $3.string().to_string());
-         !}
-    | ID ASSIGN ID !{ println!("ASSIGNMENT"); $$ = AttributeData::SetEnvVar($1.id().to_string(), $3.id().to_string()); !}
-    .
-
-UnsetEnvVar: UNSET WS ID .

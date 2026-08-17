@@ -10,36 +10,28 @@ Symbols:
   Non Terminal Symbols:
     AAStart: TokenSet{"unset", ID, STRING}:(false)
     Command: TokenSet{"unset", ID, STRING}:(false)
-    SetEnvVar: TokenSet{ID}:(false)
-    UnsetEnvVar: TokenSet{"unset"}:(false)
 
 Productions:
   AAStart: Command #(NonAssoc, 0)
   Command: STRING WS ID #(NonAssoc, 0)
-  Command: SetEnvVar #(NonAssoc, 0)
-  Command: UnsetEnvVar #(NonAssoc, 0)
-  SetEnvVar: ID "=" STRING #(NonAssoc, 0)
-  SetEnvVar: ID "=" ID #(NonAssoc, 0)
-  UnsetEnvVar: "unset" WS ID #(NonAssoc, 0)
+  Command: ID "=" ID #(NonAssoc, 0)
+  Command: ID "=" STRING #(NonAssoc, 0)
+  Command: "unset" WS ID #(NonAssoc, 0)
 
 State<0>:
   Grammar Items:
     AAStart: . Command #(NonAssoc, 0): TokenSet{AAEnd}
     Command: . STRING WS ID #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: . SetEnvVar #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: . UnsetEnvVar #(NonAssoc, 0): TokenSet{AAEnd}
-    SetEnvVar: . ID "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
-    SetEnvVar: . ID "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
-    UnsetEnvVar: . "unset" WS ID #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: . ID "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: . ID "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: . "unset" WS ID #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
-      "unset" -> State<6>
-      ID -> State<5>
+      "unset" -> State<4>
+      ID -> State<3>
       STRING -> State<2>
   Go To Table:
     Command -> State<1>
-    SetEnvVar -> State<3>
-    UnsetEnvVar -> State<4>
   Error Recovery State: <none>
 
 State<1>:
@@ -57,85 +49,65 @@ State<2>:
     Command: STRING . WS ID #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
-      WS -> State<7>
+      WS -> State<5>
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<3>:
   Grammar Items:
-    Command: SetEnvVar .  #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: ID . "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: ID . "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
-    Reductions:
-      AAEnd: reduce Command: SetEnvVar #(NonAssoc, 0)
+    Shifts:
+      "=" -> State<6>
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<4>:
   Grammar Items:
-    Command: UnsetEnvVar .  #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: "unset" . WS ID #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
-    Reductions:
-      AAEnd: reduce Command: UnsetEnvVar #(NonAssoc, 0)
+    Shifts:
+      WS -> State<7>
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<5>:
   Grammar Items:
-    SetEnvVar: ID . "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
-    SetEnvVar: ID . "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: STRING WS . ID #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
-      "=" -> State<8>
+      ID -> State<8>
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<6>:
   Grammar Items:
-    UnsetEnvVar: "unset" . WS ID #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: ID "=" . ID #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: ID "=" . STRING #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
-      WS -> State<9>
+      ID -> State<9>
+      STRING -> State<10>
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<7>:
   Grammar Items:
-    Command: STRING WS . ID #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: "unset" WS . ID #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
-      ID -> State<10>
+      ID -> State<11>
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<8>:
-  Grammar Items:
-    SetEnvVar: ID "=" . STRING #(NonAssoc, 0): TokenSet{AAEnd}
-    SetEnvVar: ID "=" . ID #(NonAssoc, 0): TokenSet{AAEnd}
-  Parser Action Table:
-    Shifts:
-      ID -> State<12>
-      STRING -> State<11>
-  Go To Table:
-    <empty>
-  Error Recovery State: <none>
-
-State<9>:
-  Grammar Items:
-    UnsetEnvVar: "unset" WS . ID #(NonAssoc, 0): TokenSet{AAEnd}
-  Parser Action Table:
-    Shifts:
-      ID -> State<13>
-  Go To Table:
-    <empty>
-  Error Recovery State: <none>
-
-State<10>:
   Grammar Items:
     Command: STRING WS ID .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
@@ -145,32 +117,32 @@ State<10>:
     <empty>
   Error Recovery State: <none>
 
+State<9>:
+  Grammar Items:
+    Command: ID "=" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
+  Parser Action Table:
+    Reductions:
+      AAEnd: reduce Command: ID "=" ID #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<10>:
+  Grammar Items:
+    Command: ID "=" STRING .  #(NonAssoc, 0): TokenSet{AAEnd}
+  Parser Action Table:
+    Reductions:
+      AAEnd: reduce Command: ID "=" STRING #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
 State<11>:
   Grammar Items:
-    SetEnvVar: ID "=" STRING .  #(NonAssoc, 0): TokenSet{AAEnd}
+    Command: "unset" WS ID .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Reductions:
-      AAEnd: reduce SetEnvVar: ID "=" STRING #(NonAssoc, 0)
-  Go To Table:
-    <empty>
-  Error Recovery State: <none>
-
-State<12>:
-  Grammar Items:
-    SetEnvVar: ID "=" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
-  Parser Action Table:
-    Reductions:
-      AAEnd: reduce SetEnvVar: ID "=" ID #(NonAssoc, 0)
-  Go To Table:
-    <empty>
-  Error Recovery State: <none>
-
-State<13>:
-  Grammar Items:
-    UnsetEnvVar: "unset" WS ID .  #(NonAssoc, 0): TokenSet{AAEnd}
-  Parser Action Table:
-    Reductions:
-      AAEnd: reduce UnsetEnvVar: "unset" WS ID #(NonAssoc, 0)
+      AAEnd: reduce Command: "unset" WS ID #(NonAssoc, 0)
   Go To Table:
     <empty>
   Error Recovery State: <none>

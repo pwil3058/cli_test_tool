@@ -5,10 +5,17 @@ use lexan;
 
 #[allow(dead_code)]
 #[derive(Debug, Default)]
-pub enum Command {
+pub enum CommandAction {
     SetEnvVar(String, String),
+    UnsetVar(String),
     #[default]
     Default,
+}
+
+#[derive(Debug, Default)]
+pub struct Command {
+    pub string: String,
+    pub action: CommandAction,
 }
 
 #[cfg(test)]
@@ -23,29 +30,21 @@ pub enum AttributeData {
     Error(lalr1::Error<AATerminal>),
     String(String),
     Id(String),
-    SetEnvVar(String, String),
     #[default]
     Default,
 }
 
 impl AttributeData {
-    fn string(&self) -> &String {
+    fn string(&self) -> String {
         match self {
-            Self::String(string) => string,
+            Self::String(string) => string.clone(),
             _ => panic!("Invalid AttributeData variant"),
         }
     }
 
-    fn id(&self) -> &String {
+    fn id(&self) -> String {
         match self {
-            Self::Id(string) => string,
-            _ => panic!("Invalid AttributeData variant"),
-        }
-    }
-
-    fn set_env_var(&self) -> (&String, &String) {
-        match self {
-            Self::SetEnvVar(var, value) => (var, value),
+            Self::Id(string) => string.clone(),
             _ => panic!("Invalid AttributeData variant"),
         }
     }
@@ -133,8 +132,6 @@ lazy_static::lazy_static! {
 pub enum AANonTerminal {
     AAStart,
     Command,
-    SetEnvVar,
-    UnsetEnvVar,
 }
 
 impl std::fmt::Display for AANonTerminal {
@@ -142,8 +139,6 @@ impl std::fmt::Display for AANonTerminal {
         match self {
             AANonTerminal::AAStart => write!(f, r"AAStart"),
             AANonTerminal::Command => write!(f, r"Command"),
-            AANonTerminal::SetEnvVar => write!(f, r"SetEnvVar"),
-            AANonTerminal::UnsetEnvVar => write!(f, r"UnsetEnvVar"),
         }
     }
 }
@@ -163,17 +158,15 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
             0 => btree_set![UNSET, ID, STRING],
             1 => btree_set![AAEnd],
             2 => btree_set![WS],
-            3 => btree_set![AAEnd],
-            4 => btree_set![AAEnd],
-            5 => btree_set![ASSIGN],
-            6 => btree_set![WS],
+            3 => btree_set![ASSIGN],
+            4 => btree_set![WS],
+            5 => btree_set![ID],
+            6 => btree_set![ID, STRING],
             7 => btree_set![ID],
-            8 => btree_set![ID, STRING],
-            9 => btree_set![ID],
+            8 => btree_set![AAEnd],
+            9 => btree_set![AAEnd],
             10 => btree_set![AAEnd],
             11 => btree_set![AAEnd],
-            12 => btree_set![AAEnd],
-            13 => btree_set![AAEnd],
             _ => panic!("illegal state: {state}"),
         };
     }
@@ -184,8 +177,8 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
         let aa_tag = *aa_token.tag();
         return match aa_state {
             0 => match aa_tag {
-                UNSET => Action::Shift(6),
-                ID => Action::Shift(5),
+                UNSET => Action::Shift(4),
+                ID => Action::Shift(3),
                 STRING => Action::Shift(2),
                 _ => Action::SyntaxError,
             },
@@ -195,58 +188,48 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
                 _ => Action::SyntaxError,
             },
             2 => match aa_tag {
-                WS => Action::Shift(7),
+                WS => Action::Shift(5),
                 _ => Action::SyntaxError,
             },
             3 => match aa_tag {
-                // Command: SetEnvVar #(NonAssoc, 0)
-                AAEnd => Action::Reduce(2),
+                ASSIGN => Action::Shift(6),
                 _ => Action::SyntaxError,
             },
             4 => match aa_tag {
-                // Command: UnsetEnvVar #(NonAssoc, 0)
-                AAEnd => Action::Reduce(3),
+                WS => Action::Shift(7),
                 _ => Action::SyntaxError,
             },
             5 => match aa_tag {
-                ASSIGN => Action::Shift(8),
+                ID => Action::Shift(8),
                 _ => Action::SyntaxError,
             },
             6 => match aa_tag {
-                WS => Action::Shift(9),
+                ID => Action::Shift(9),
+                STRING => Action::Shift(10),
                 _ => Action::SyntaxError,
             },
             7 => match aa_tag {
-                ID => Action::Shift(10),
+                ID => Action::Shift(11),
                 _ => Action::SyntaxError,
             },
             8 => match aa_tag {
-                ID => Action::Shift(12),
-                STRING => Action::Shift(11),
-                _ => Action::SyntaxError,
-            },
-            9 => match aa_tag {
-                ID => Action::Shift(13),
-                _ => Action::SyntaxError,
-            },
-            10 => match aa_tag {
                 // Command: STRING WS ID #(NonAssoc, 0)
                 AAEnd => Action::Reduce(1),
                 _ => Action::SyntaxError,
             },
+            9 => match aa_tag {
+                // Command: ID "=" ID #(NonAssoc, 0)
+                AAEnd => Action::Reduce(2),
+                _ => Action::SyntaxError,
+            },
+            10 => match aa_tag {
+                // Command: ID "=" STRING #(NonAssoc, 0)
+                AAEnd => Action::Reduce(3),
+                _ => Action::SyntaxError,
+            },
             11 => match aa_tag {
-                // SetEnvVar: ID "=" STRING #(NonAssoc, 0)
+                // Command: "unset" WS ID #(NonAssoc, 0)
                 AAEnd => Action::Reduce(4),
-                _ => Action::SyntaxError,
-            },
-            12 => match aa_tag {
-                // SetEnvVar: ID "=" ID #(NonAssoc, 0)
-                AAEnd => Action::Reduce(5),
-                _ => Action::SyntaxError,
-            },
-            13 => match aa_tag {
-                // UnsetEnvVar: "unset" WS ID #(NonAssoc, 0)
-                AAEnd => Action::Reduce(6),
                 _ => Action::SyntaxError,
             },
             _ => panic!("illegal state: {aa_state}"),
@@ -257,11 +240,9 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
         match production_id {
             0 => (AANonTerminal::AAStart, 1),
             1 => (AANonTerminal::Command, 3),
-            2 => (AANonTerminal::Command, 1),
-            3 => (AANonTerminal::Command, 1),
-            4 => (AANonTerminal::SetEnvVar, 3),
-            5 => (AANonTerminal::SetEnvVar, 3),
-            6 => (AANonTerminal::UnsetEnvVar, 3),
+            2 => (AANonTerminal::Command, 3),
+            3 => (AANonTerminal::Command, 3),
+            4 => (AANonTerminal::Command, 3),
             _ => panic!("malformed production data table"),
         }
     }
@@ -270,8 +251,6 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
         return match current_state {
             0 => match lhs {
                 AANonTerminal::Command => 1,
-                AANonTerminal::SetEnvVar => 3,
-                AANonTerminal::UnsetEnvVar => 4,
                 _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
             },
             _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
@@ -292,30 +271,29 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
         match aa_production_id {
             1 => {
                 // Command: STRING WS ID #(NonAssoc, 0)
-                println!("{:?} {:?}", aa_rhs[0].string(), aa_rhs[2].id());
+                println!("{:?} {:?}", aa_rhs[0], aa_rhs[2]);
             }
             2 => {
-                // Command: SetEnvVar #(NonAssoc, 0)
+                // Command: ID "=" ID #(NonAssoc, 0)
 
-                let (var, value) = aa_rhs[0].set_env_var();
-                *self = Command::SetEnvVar(var.to_string(), value.to_string());
+                println!("SetEnvar: {:?} {:?} {:?}", aa_rhs[0], aa_rhs[1], aa_rhs[2]);
+                let var = aa_rhs[0].id();
+                let value = aa_rhs[2].id();
+                self.action = CommandAction::SetEnvVar(var, value);
+            }
+            3 => {
+                // Command: ID "=" STRING #(NonAssoc, 0)
+
+                println!("SetEnvar: {:?} {:?} {:?}", aa_rhs[0], aa_rhs[1], aa_rhs[2]);
+                let var = aa_rhs[0].id();
+                let value = aa_rhs[2].string();
+                self.action = CommandAction::SetEnvVar(var, value);
             }
             4 => {
-                // SetEnvVar: ID "=" STRING #(NonAssoc, 0)
+                // Command: "unset" WS ID #(NonAssoc, 0)
 
-                println!("ASSIGNMENT");
-                aa_lhs = AttributeData::SetEnvVar(
-                    aa_rhs[0].id().to_string(),
-                    aa_rhs[2].string().to_string(),
-                );
-            }
-            5 => {
-                // SetEnvVar: ID "=" ID #(NonAssoc, 0)
-                println!("ASSIGNMENT");
-                aa_lhs = AttributeData::SetEnvVar(
-                    aa_rhs[0].id().to_string(),
-                    aa_rhs[2].id().to_string(),
-                );
+                println!("UnsetVar: {:?}", aa_rhs[2]);
+                self.action = CommandAction::UnsetVar(aa_rhs[2].id())
             }
             _ => aa_inject(String::new(), String::new()),
         };
