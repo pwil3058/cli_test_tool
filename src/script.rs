@@ -23,6 +23,7 @@ impl EnvVars {
         EnvVars(env_vars)
     }
 
+    #[allow(dead_code)]
     pub fn var(&self, key: &str) -> Option<&String> {
         self.0.get(key)
     }

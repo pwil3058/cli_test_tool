@@ -1,10 +1,11 @@
 // Copyright 2022 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+use crate::command_action::CommandAction;
 use crate::error::Error;
+use crate::script::EnvVars;
+use lalr1::Parser;
 use std::convert::From;
 use std::env;
-
-use crate::script::EnvVars;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Outcome {
@@ -36,102 +37,65 @@ impl From<std::process::Output> for Outcome {
 #[derive(Debug)]
 pub struct Command {
     pub cmd_line_string: String,
-    cmd_line: Vec<String>,
-    input_path: Option<String>,
-    redirection_path: Option<String>,
+    pub cmd_action: CommandAction,
 }
 
 impl Command {
     pub fn new(cmd_line_string: &str) -> Result<Self, &'static str> {
-        match shlex::split(cmd_line_string) {
-            Some(mut cmd_line) => {
-                if cmd_line.is_empty() {
-                    Err("Empty command line.")
-                } else {
-                    let input_path = match cmd_line.iter().position(|x| *x == "<") {
-                        Some(i_index) => match cmd_line.get(i_index + 1) {
-                            Some(path) => {
-                                let path = path.clone();
-                                cmd_line.remove(i_index);
-                                cmd_line.remove(i_index);
-                                Some(path)
-                            }
-                            None => return Err("expected input file path"),
-                        },
-                        None => None,
-                    };
-                    let redirection_path = match cmd_line.iter().position(|x| *x == ">") {
-                        Some(red_index) => match cmd_line.get(red_index + 1) {
-                            Some(path) => {
-                                let path = path.clone();
-                                cmd_line.remove(red_index);
-                                cmd_line.remove(red_index);
-                                Some(path)
-                            }
-                            None => return Err("expected input file path"),
-                        },
-                        None => None,
-                    };
-                    Ok(Command {
-                        cmd_line_string: String::from(cmd_line_string),
-                        cmd_line,
-                        input_path,
-                        redirection_path,
-                    })
-                }
-            }
-            None => Err("Poorly formed command line"),
-        }
+        let mut cmd_action: CommandAction = Default::default();
+        if let Err(_) = cmd_action.parse_text(cmd_line_string, "command") {
+            return Err("Command not parseable");
+        };
+        Ok(Self {
+            cmd_line_string: cmd_line_string.to_string(),
+            cmd_action,
+        })
     }
 
     pub fn run(&self, env_vars: &mut EnvVars) -> Result<Outcome, Error> {
-        if self.cmd_line[0].find("=").is_some() {
-            let pair: Vec<&str> = self.cmd_line[0].as_str().split('=').collect();
-            if pair.len() == 2 {
-                // env::set_var(pair[0], pair[1]);
-                let _ = env_vars.set_var(pair[0].into(), pair[1].into());
-            } else {
-                return Err(Error::Why("expected \"ARG=VALUE\""));
-            }
-            return Ok(Outcome::default());
-        }
-        match self.cmd_line[0].as_str() {
-            "umask" => Err(Error::Why("\"umask\" is not available")),
-            "cd" => match self.cmd_line.len() {
-                2 => {
-                    env::set_current_dir(&self.cmd_line[1])?;
-                    // env::set_var("PWD", env::current_dir()?);
-                    let _ = env_vars.set_var("PWD", &env::current_dir()?.to_string_lossy());
-                    Ok(Outcome::default())
-                }
-                _ => Err(Error::Why("expected exactly one argument")),
-            },
-            "unset" => {
-                for var in &self.cmd_line[1..] {
-                    // env::remove_var(var);
-                    // let os_var = OsString::from(var);
-                    let _ = env_vars.remove_var(var);
-                }
+        use CommandAction::*;
+        match &self.cmd_action {
+            SetEnvVar(var, value) => {
+                env_vars.set_var(&var, &value);
                 Ok(Outcome::default())
             }
-            program_name => {
-                let input_file = match self.input_path {
-                    Some(ref path) => std::process::Stdio::from(std::fs::File::open(path)?),
+            UnsetEnvVar(var) => {
+                env_vars.remove_var(&var);
+                Ok(Outcome::default())
+            }
+            ChangeDir(dir) => {
+                env::set_current_dir(&dir)?;
+                let _ = env_vars.set_var("PWD", &env::current_dir()?.to_string_lossy());
+                Ok(Outcome::default())
+            }
+            RunProgram(program_name, args, input_path, output_path, err_output_path) => {
+                let input_file = match input_path {
+                    Some(path) => std::process::Stdio::from(std::fs::File::open(path)?),
                     None => std::process::Stdio::null(),
                 };
-                let output_file = match self.redirection_path {
-                    Some(ref path) => std::process::Stdio::from(std::fs::File::create(path)?),
+                let output_file = match output_path {
+                    Some((path, _overwrite)) => {
+                        std::process::Stdio::from(std::fs::File::create(path)?)
+                    }
+                    None => std::process::Stdio::piped(),
+                };
+                let err_output_file = match err_output_path {
+                    Some((path, _overwrite)) => {
+                        std::process::Stdio::from(std::fs::File::create(path)?)
+                    }
                     None => std::process::Stdio::piped(),
                 };
                 Ok(Outcome::from(
                     std::process::Command::new(program_name)
-                        .args(&self.cmd_line[1..])
+                        .args(args.iter())
                         .stdin(input_file)
                         .stdout(output_file)
+                        .stderr(err_output_file)
                         .envs(&env_vars.0)
                         .output()?,
                 ))
             }
+            Default => Err(Error::Why("Uninitialized CommandAction")),
         }
     }
 }
@@ -139,16 +103,24 @@ impl Command {
 #[cfg(test)]
 mod command_tests {
     use crate::command::{Command, Outcome};
+    use crate::command_action::CommandAction;
     use crate::script::EnvVars;
 
     #[test]
     fn new_command() {
+        use CommandAction::*;
         let cmd = Command::new("whatever x y < bbb > aaa").unwrap();
         println!("{:?}", cmd);
-        assert_eq!(cmd.cmd_line[0], "whatever");
-        assert_eq!(cmd.cmd_line[1..], ["x", "y"]);
-        assert_eq!(cmd.input_path, Some("bbb".to_string()));
-        assert_eq!(cmd.redirection_path, Some("aaa".to_string()));
+        match &cmd.cmd_action {
+            RunProgram(program_name, args, input_path, output_path, err_output_path) => {
+                assert_eq!(program_name, "whatever");
+                assert_eq!(*args, ["x", "y"]);
+                assert_eq!(*input_path, Some("bbb".to_string()));
+                assert_eq!(*output_path, Some(("aaa".to_string(), true)));
+                assert_eq!(*err_output_path, None);
+            }
+            _ => assert!(false),
+        }
         let env_vars = &mut EnvVars::new();
         let result = cmd.run(env_vars).unwrap_err().to_string();
         assert_eq!(result, "IOError: No such file or directory (os error 2)");
