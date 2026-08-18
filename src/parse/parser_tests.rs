@@ -3,20 +3,17 @@ use lalr1::Parser;
 
 #[test]
 fn test_command_parse() {
-    let mut command = Command::default();
-    assert!(command.parse_text("PATH=/usr/bin:/bin", "label").is_ok());
+    let mut action = CommandAction::default();
+    assert!(action.parse_text("PATH=/usr/bin:/bin", "label").is_ok());
     assert_eq!(
-        command.action,
+        action,
         CommandAction::SetEnvVar("PATH".to_string(), "/usr/bin:/bin".to_string())
     );
-    assert!(command.parse_text("unset WHATEVER", "label").is_ok());
+    assert!(action.parse_text("unset WHATEVER", "label").is_ok());
+    assert_eq!(action, CommandAction::UnsetEnvVar("WHATEVER".to_string()));
+    assert!(action.parse_text("ls", "label").is_ok());
     assert_eq!(
-        command.action,
-        CommandAction::UnsetEnvVar("WHATEVER".to_string())
-    );
-    assert!(command.parse_text("ls", "label").is_ok());
-    assert_eq!(
-        command.action,
+        action,
         CommandAction::RunProgram("ls".to_string(), vec![], None, None, None)
     );
     assert!("\"target".starts_with('"'));

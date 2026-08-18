@@ -13,16 +13,10 @@ pub enum CommandAction {
     Default,
 }
 
-#[derive(Debug, Default)]
-pub struct Command {
-    pub string: String,
-    pub action: CommandAction
-}
-
 #[cfg(test)]
 pub mod parser_tests;
 
-impl lalr1::ReportError<AATerminal> for Command {}
+impl lalr1::ReportError<AATerminal> for CommandAction {}
 
 #[allow(dead_code)]
 #[derive(Debug, Default, Clone)]
@@ -70,7 +64,7 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 %}
 
 %attr AttributeData
-%target Command
+%target CommandAction
 
 %reduce_reduce 1
 
@@ -88,16 +82,16 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 
 Command:
     ID "=" ID !{
-        self.action = CommandAction::SetEnvVar($1.id(), $3.id());
+        *self = CommandAction::SetEnvVar($1.id(), $3.id());
     !}
     | ID "=" STRING !{
-        self.action = CommandAction::SetEnvVar($1.id(), $3.string());
+        *self = CommandAction::SetEnvVar($1.id(), $3.string());
     !}
     | "unset" ID !{
-        self.action = CommandAction::UnsetEnvVar($2.id());
+        *self = CommandAction::UnsetEnvVar($2.id());
     !}
     | ID !{
-        self.action = CommandAction::RunProgram($1.id(), vec![], None, None, None);
+        *self = CommandAction::RunProgram($1.id(), vec![], None, None, None);
     !}
     | ID Args !{
     !}

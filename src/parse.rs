@@ -19,16 +19,10 @@ pub enum CommandAction {
     Default,
 }
 
-#[derive(Debug, Default)]
-pub struct Command {
-    pub string: String,
-    pub action: CommandAction,
-}
-
 #[cfg(test)]
 pub mod parser_tests;
 
-impl lalr1::ReportError<AATerminal> for Command {}
+impl lalr1::ReportError<AATerminal> for CommandAction {}
 
 #[allow(dead_code)]
 #[derive(Debug, Default, Clone)]
@@ -152,7 +146,7 @@ impl std::fmt::Display for AANonTerminal {
     }
 }
 
-impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
+impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
     fn lexical_analyzer(&self) -> &lexan::LexicalAnalyzer<AATerminal> {
         &AALEXAN
     }
@@ -302,22 +296,22 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for Command {
             1 => {
                 // Command: ID "=" ID #(NonAssoc, 0)
 
-                self.action = CommandAction::SetEnvVar(aa_rhs[0].id(), aa_rhs[2].id());
+                *self = CommandAction::SetEnvVar(aa_rhs[0].id(), aa_rhs[2].id());
             }
             2 => {
                 // Command: ID "=" STRING #(NonAssoc, 0)
 
-                self.action = CommandAction::SetEnvVar(aa_rhs[0].id(), aa_rhs[2].string());
+                *self = CommandAction::SetEnvVar(aa_rhs[0].id(), aa_rhs[2].string());
             }
             3 => {
                 // Command: "unset" ID #(NonAssoc, 0)
 
-                self.action = CommandAction::UnsetEnvVar(aa_rhs[1].id());
+                *self = CommandAction::UnsetEnvVar(aa_rhs[1].id());
             }
             4 => {
                 // Command: ID #(NonAssoc, 0)
 
-                self.action = CommandAction::RunProgram(aa_rhs[0].id(), vec![], None, None, None);
+                *self = CommandAction::RunProgram(aa_rhs[0].id(), vec![], None, None, None);
             }
             5 => {
                 // Command: ID Args #(NonAssoc, 0)
