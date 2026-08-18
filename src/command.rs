@@ -74,14 +74,32 @@ impl Command {
                     None => std::process::Stdio::null(),
                 };
                 let output_file = match output_path {
-                    Some((path, _overwrite)) => {
-                        std::process::Stdio::from(std::fs::File::create(path)?)
+                    Some((path, overwrite)) => {
+                        if *overwrite {
+                            std::process::Stdio::from(std::fs::File::create(path)?)
+                        } else {
+                            let file = std::fs::OpenOptions::new()
+                                .append(true)
+                                .write(true)
+                                .create(true)
+                                .open(path)?;
+                            std::process::Stdio::from(file)
+                        }
                     }
                     None => std::process::Stdio::piped(),
                 };
                 let err_output_file = match err_output_path {
-                    Some((path, _overwrite)) => {
-                        std::process::Stdio::from(std::fs::File::create(path)?)
+                    Some((path, overwrite)) => {
+                        if *overwrite {
+                            std::process::Stdio::from(std::fs::File::create(path)?)
+                        } else {
+                            let file = std::fs::OpenOptions::new()
+                                .append(true)
+                                .write(true)
+                                .create(true)
+                                .open(path)?;
+                            std::process::Stdio::from(file)
+                        }
                     }
                     None => std::process::Stdio::piped(),
                 };
