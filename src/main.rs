@@ -1,8 +1,8 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 mod command;
+mod command_action;
 mod error;
-mod parse;
 mod script;
 
 use std::io::{self, Write};

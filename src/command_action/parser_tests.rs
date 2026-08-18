@@ -1,4 +1,4 @@
-use crate::parse::*;
+use crate::command_action::*;
 use lalr1::Parser;
 
 #[test]
@@ -34,11 +34,9 @@ fn test_command_parse() {
         )
     );
 
-    assert!(
-        action
-            .parse_text("echo hello world < something > else", "label")
-            .is_ok()
-    );
+    assert!(action
+        .parse_text("echo hello world < something > else", "label")
+        .is_ok());
     assert_eq!(
         action,
         CommandAction::RunProgram(
@@ -50,11 +48,9 @@ fn test_command_parse() {
         )
     );
 
-    assert!(
-        action
-            .parse_text("echo hello world < something >> else 2> error", "label")
-            .is_ok()
-    );
+    assert!(action
+        .parse_text("echo hello world < something >> else 2> error", "label")
+        .is_ok());
     assert_eq!(
         action,
         CommandAction::RunProgram(
