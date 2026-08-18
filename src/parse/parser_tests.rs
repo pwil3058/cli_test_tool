@@ -16,5 +16,16 @@ fn test_command_parse() {
         action,
         CommandAction::RunProgram("ls".to_string(), vec![], None, None, None)
     );
+    assert!(action.parse_text("echo hello world", "label").is_ok());
+    assert_eq!(
+        action,
+        CommandAction::RunProgram(
+            "echo".to_string(),
+            vec!["hello".to_string(), "world".to_string()],
+            None,
+            None,
+            None
+        )
+    );
     assert!("\"target".starts_with('"'));
 }

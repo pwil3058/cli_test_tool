@@ -31,11 +31,26 @@ pub enum AttributeData {
     Error(lalr1::Error<AATerminal>),
     String(String),
     Id(String),
+    Args(Vec<String>),
     #[default]
     Default,
 }
 
 impl AttributeData {
+    fn args(&self) -> Vec<String> {
+        match self {
+            Self::Args(args) => args.clone(),
+            _ => panic!("Invalid AttributeData variant"),
+        }
+    }
+
+    fn args_mut(&mut self) -> &mut Vec<String> {
+        match self {
+            Self::Args(args) => args,
+            _ => panic!("Invalid AttributeData variant"),
+        }
+    }
+
     fn string(&self) -> String {
         match self {
             Self::String(string) => string.clone(),
@@ -130,7 +145,6 @@ lazy_static::lazy_static! {
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub enum AANonTerminal {
     AAStart,
-    Arg,
     Args,
     Command,
 }
@@ -139,7 +153,6 @@ impl std::fmt::Display for AANonTerminal {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             AANonTerminal::AAStart => write!(f, r"AAStart"),
-            AANonTerminal::Arg => write!(f, r"Arg"),
             AANonTerminal::Args => write!(f, r"Args"),
             AANonTerminal::Command => write!(f, r"Command"),
         }
@@ -169,7 +182,6 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
             8 => btree_set![AAEnd],
             9 => btree_set![ID, STRING, AAEnd],
             10 => btree_set![ID, STRING, AAEnd],
-            11 => btree_set![ID, STRING, AAEnd],
             _ => panic!("illegal state: {state}"),
         };
     }
@@ -191,10 +203,8 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
             },
             2 => match aa_tag {
                 ASSIGN => Action::Shift(4),
-                // Command: ID #(NonAssoc, 0)
-                AAEnd => Action::Reduce(4),
                 // Args: <empty> #(NonAssoc, 0)
-                ID | STRING => Action::Reduce(6),
+                ID | STRING | AAEnd => Action::Reduce(5),
                 _ => Action::SyntaxError,
             },
             3 => match aa_tag {
@@ -207,10 +217,10 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
                 _ => Action::SyntaxError,
             },
             5 => match aa_tag {
-                ID => Action::Shift(10),
-                STRING => Action::Shift(11),
+                ID => Action::Shift(9),
+                STRING => Action::Shift(10),
                 // Command: ID Args #(NonAssoc, 0)
-                AAEnd => Action::Reduce(5),
+                AAEnd => Action::Reduce(4),
                 _ => Action::SyntaxError,
             },
             6 => match aa_tag {
@@ -229,18 +239,13 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
                 _ => Action::SyntaxError,
             },
             9 => match aa_tag {
-                // Args: Args Arg #(NonAssoc, 0)
-                ID | STRING | AAEnd => Action::Reduce(7),
+                // Args: Args ID #(NonAssoc, 0)
+                ID | STRING | AAEnd => Action::Reduce(6),
                 _ => Action::SyntaxError,
             },
             10 => match aa_tag {
-                // Arg: ID #(NonAssoc, 0)
-                ID | STRING | AAEnd => Action::Reduce(8),
-                _ => Action::SyntaxError,
-            },
-            11 => match aa_tag {
-                // Arg: STRING #(NonAssoc, 0)
-                ID | STRING | AAEnd => Action::Reduce(9),
+                // Args: Args STRING #(NonAssoc, 0)
+                ID | STRING | AAEnd => Action::Reduce(7),
                 _ => Action::SyntaxError,
             },
             _ => panic!("illegal state: {aa_state}"),
@@ -253,12 +258,10 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
             1 => (AANonTerminal::Command, 3),
             2 => (AANonTerminal::Command, 3),
             3 => (AANonTerminal::Command, 2),
-            4 => (AANonTerminal::Command, 1),
-            5 => (AANonTerminal::Command, 2),
-            6 => (AANonTerminal::Args, 0),
+            4 => (AANonTerminal::Command, 2),
+            5 => (AANonTerminal::Args, 0),
+            6 => (AANonTerminal::Args, 2),
             7 => (AANonTerminal::Args, 2),
-            8 => (AANonTerminal::Arg, 1),
-            9 => (AANonTerminal::Arg, 1),
             _ => panic!("malformed production data table"),
         }
     }
@@ -271,10 +274,6 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
             },
             2 => match lhs {
                 AANonTerminal::Args => 5,
-                _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
-            },
-            5 => match lhs {
-                AANonTerminal::Arg => 9,
                 _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
             },
             _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
@@ -309,15 +308,25 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
                 *self = CommandAction::UnsetEnvVar(aa_rhs[1].id());
             }
             4 => {
-                // Command: ID #(NonAssoc, 0)
+                // Command: ID Args #(NonAssoc, 0)
 
-                *self = CommandAction::RunProgram(aa_rhs[0].id(), vec![], None, None, None);
+                *self =
+                    CommandAction::RunProgram(aa_rhs[0].id(), aa_rhs[1].args(), None, None, None);
             }
             5 => {
-                // Command: ID Args #(NonAssoc, 0)
+                // Args: <empty> #(NonAssoc, 0)
+
+                aa_lhs = AttributeData::Args(vec![]);
             }
             6 => {
-                // Args: <empty> #(NonAssoc, 0)
+                // Args: Args ID #(NonAssoc, 0)
+
+                aa_lhs.args_mut().push(aa_rhs[1].id())
+            }
+            7 => {
+                // Args: Args STRING #(NonAssoc, 0)
+
+                aa_lhs.args_mut().push(aa_rhs[1].string())
             }
             _ => aa_inject(String::new(), String::new()),
         };
