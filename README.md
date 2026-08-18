@@ -1,19 +1,16 @@
 # cli_test_tool - Command Line Interface (CLI) Test Tool
 
-cli_test_tool is a program for testing command line interfaces (CLI) by
-evaluating scripts that describe the test. Test scripts are simple text
-files specifying commands to be run and the expected output.
+cli_test_tool is a program for testing command line interfaces (CLI) by evaluating scripts that describe the test. Test
+scripts are simple text files specifying commands to be run and the expected output.
 
 Lines that begin with a "$" are interpreted as a command to be run.
 
-Lines following $ lines that begin with a ">" are interpreted as the expected output on
-the command's stdout.
+Lines following $ lines that begin with a ">" are interpreted as the expected output on the command's stdout.
 
-Lines following $ lines that begin with a "!" are interpreted as the expected output on
-the command's stderr.
+Lines following $ lines that begin with a "!" are interpreted as the expected output on the command's stderr.
 
-Lines following $ lines that begin with a "?" are expected to contain an integer that is
-the expected return value for the command.
+Lines following $ lines that begin with a "?" are expected to contain an integer that is the expected return value for
+the command.
 
 All other lines are treated as comments and are ignored.
 
@@ -38,17 +35,15 @@ $ ls -a
 
 turns this file into a test script which cli_test_tool can evaluate.
 
-If the test succeeds then the return value will be 0 and otherwise 1.
-Any other return value indicates that the program failed without evaluating
-the test script.
+If the test succeeds then the return value will be 0 and otherwise 1. Any other return value indicates that the program
+failed without evaluating the test script.
 
-By default, the test will be run in a clean temporary directory. This can be overridden
-using the -n option.
+By default, the test will be run in a clean temporary directory. This can be overridden using the -n option.
 
 #Usage:
 
 ```
-usage: cliteo [-h] [-q] [-v] [-t] script
+usage: cliteo [-h] [-q] [-v] [-n] script
 
 Run and evaluate a test script.
 
