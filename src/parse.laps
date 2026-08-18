@@ -1,4 +1,5 @@
 %{
+// Copyright (c) Peter Williams <pwil3058@bigpond.net.au> <pwil3058@gmail.com>
 
 use lalr1;
 use lexan;
@@ -8,7 +9,8 @@ use lexan;
 pub enum CommandAction {
     SetEnvVar(String, String),
     UnsetEnvVar(String),
-    RunProgram(String, Vec<String>, Option<String>, Option<String>, Option<String>),
+    ChangeDir(String),
+    RunProgram(String, Vec<String>, Option<String>, Option<(String, bool)>, Option<(String, bool)>),
     #[default]
     Default,
 }
@@ -26,6 +28,8 @@ pub enum AttributeData {
     String(String),
     Id(String),
     Args(Vec<String>),
+    Input(Option<String>),
+    Output(Option<(String, bool)>),
     #[default]
     Default
 }
@@ -41,6 +45,20 @@ impl AttributeData {
    fn args_mut(&mut self) -> &mut Vec<String> {
         match self {
             Self::Args(args) => args,
+            _ => panic!("Invalid AttributeData variant")
+        }
+    }
+
+    fn input(&self) -> Option<String> {
+        match self {
+            Self::Input(input) => input.clone(),
+            _ => panic!("Invalid AttributeData variant")
+        }
+    }
+
+    fn output(&self) -> Option<(String, bool)> {
+        match self {
+            Self::Output(output) => output.clone(),
             _ => panic!("Invalid AttributeData variant")
         }
     }
@@ -85,17 +103,23 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 
 %%
 
-%token  EOL     (\n)
-%token  STRING  ("(\\"|[^"\t\r\n\v\f])+")
-%token  ID      ([\w\d._\-/:]+)
-%token  ASSIGN  "="
-%token  UNSET   "unset"
+%token  EOL         (\n)
+%token  STRING      ("(\\"|[^"\t\r\n\v\f])+")
+%token  ID          ([\w\d._\-/:]+)
+%token  ASSIGN      "="
+%token  INPUT       "<"
+%token  OVERWRITE   ">"
+%token  APPEND      ">>"
+%token  EOVERWRITE  "2>"
+%token  EAPPEND     "2>>"
+%token  UNSET       "unset"
+%token  CDIR        "cd"
 
 %skip ([ \t]+)
 
 %%
 
-Command:
+CommandAction:
     ID "=" ID !{
         *self = CommandAction::SetEnvVar($1.id(), $3.id());
     !}
@@ -105,10 +129,20 @@ Command:
     | "unset" ID !{
         *self = CommandAction::UnsetEnvVar($2.id());
     !}
-    | ID Args !{
-        *self = CommandAction::RunProgram($1.id(), $2.args(), None, None, None);
+    | "cd" ID !{
+        *self = CommandAction::ChangeDir($2.id());
+    !}
+    | ID Args Input Output ErrOutput !{
+        *self = CommandAction::RunProgram(
+            $1.id(),
+            $2.args(),
+            $3.input(),
+            $4.output(),
+            $5.output(),
+        );
     !}
     .
+
 Args: !{
         $$ = AttributeData::Args(vec![]);
     !}
@@ -119,3 +153,18 @@ Args: !{
         $$.args_mut().push($2.string())
     !}
     .
+
+Input: !{ $$ = AttributeData::Input(None); !}
+    | "<" ID !{ $$ = AttributeData::Input(Some($2.id())); !}
+    .
+
+Output: !{ $$ = AttributeData::Output(None); !}
+    | ">" ID !{ $$ = AttributeData::Output(Some(($2.id(), true))); !}
+    | ">>" ID !{ $$ = AttributeData::Output(Some(($2.id(), false))); !}
+    .
+
+ErrOutput: !{ $$ = AttributeData::Output(None); !}
+    | "2>" ID !{ $$ = AttributeData::Output(Some(($2.id(), true))); !}
+    | "2>>" ID !{ $$ = AttributeData::Output(Some(($2.id(), false))); !}
+    .
+

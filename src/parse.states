@@ -1,151 +1,336 @@
 Symbols:
   Tokens:
     AAEnd(): #(NonAssoc, 0)
+    APPEND(">>"): #(NonAssoc, 0)
     ASSIGN("="): #(NonAssoc, 0)
+    CDIR("cd"): #(NonAssoc, 0)
+    EAPPEND("2>>"): #(NonAssoc, 0)
     EOL((\n)): #(NonAssoc, 0)
+    EOVERWRITE("2>"): #(NonAssoc, 0)
     ID(([\w\d._\-/:]+)): #(NonAssoc, 0)
+    INPUT("<"): #(NonAssoc, 0)
+    OVERWRITE(">"): #(NonAssoc, 0)
     STRING(("(\\"|[^"\t\r\n\v\f])+")): #(NonAssoc, 0)
     UNSET("unset"): #(NonAssoc, 0)
   Non Terminal Symbols:
-    AAStart: TokenSet{"unset", ID}:(false)
+    AAStart: TokenSet{"cd", "unset", ID}:(false)
     Args: TokenSet{ID, STRING}:(true)
-    Command: TokenSet{"unset", ID}:(false)
+    CommandAction: TokenSet{"cd", "unset", ID}:(false)
+    ErrOutput: TokenSet{"2>>", "2>"}:(true)
+    Input: TokenSet{"<"}:(true)
+    Output: TokenSet{">>", ">"}:(true)
 
 Productions:
-  AAStart: Command #(NonAssoc, 0)
-  Command: ID "=" ID #(NonAssoc, 0)
-  Command: ID "=" STRING #(NonAssoc, 0)
-  Command: "unset" ID #(NonAssoc, 0)
-  Command: ID Args #(NonAssoc, 0)
+  AAStart: CommandAction #(NonAssoc, 0)
+  CommandAction: ID "=" ID #(NonAssoc, 0)
+  CommandAction: ID "=" STRING #(NonAssoc, 0)
+  CommandAction: "unset" ID #(NonAssoc, 0)
+  CommandAction: "cd" ID #(NonAssoc, 0)
+  CommandAction: ID Args Input Output ErrOutput #(NonAssoc, 0)
   Args: <empty> #(NonAssoc, 0)
   Args: Args ID #(NonAssoc, 0)
   Args: Args STRING #(NonAssoc, 0)
+  Input: <empty> #(NonAssoc, 0)
+  Input: "<" ID #(NonAssoc, 0)
+  Output: <empty> #(NonAssoc, 0)
+  Output: ">" ID #(NonAssoc, 0)
+  Output: ">>" ID #(NonAssoc, 0)
+  ErrOutput: <empty> #(NonAssoc, 0)
+  ErrOutput: "2>" ID #(NonAssoc, 0)
+  ErrOutput: "2>>" ID #(NonAssoc, 0)
 
 State<0>:
   Grammar Items:
-    AAStart: . Command #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: . ID "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: . ID "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: . "unset" ID #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: . ID Args #(NonAssoc, 0): TokenSet{AAEnd}
+    AAStart: . CommandAction #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: . ID "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: . ID "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: . "unset" ID #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: . "cd" ID #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: . ID Args Input Output ErrOutput #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
+      "cd" -> State<4>
       "unset" -> State<3>
       ID -> State<2>
   Go To Table:
-    Command -> State<1>
+    CommandAction -> State<1>
   Error Recovery State: <none>
 
 State<1>:
   Grammar Items:
-    AAStart: Command .  #(NonAssoc, 0): TokenSet{AAEnd}
+    AAStart: CommandAction .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Reductions:
-      AAEnd: accept AAStart: Command #(NonAssoc, 0)
+      AAEnd: accept AAStart: CommandAction #(NonAssoc, 0)
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<2>:
   Grammar Items:
-    Command: ID . "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: ID . "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: ID . Args #(NonAssoc, 0): TokenSet{AAEnd}
-    Args: . <empty> #(NonAssoc, 0): TokenSet{ID, STRING, AAEnd}
-    Args: . Args ID #(NonAssoc, 0): TokenSet{ID, STRING, AAEnd}
-    Args: . Args STRING #(NonAssoc, 0): TokenSet{ID, STRING, AAEnd}
+    CommandAction: ID . "=" ID #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: ID . "=" STRING #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: ID . Args Input Output ErrOutput #(NonAssoc, 0): TokenSet{AAEnd}
+    Args: . <empty> #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", "<", ">", ID, STRING, AAEnd}
+    Args: . Args ID #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", "<", ">", ID, STRING, AAEnd}
+    Args: . Args STRING #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", "<", ">", ID, STRING, AAEnd}
   Parser Action Table:
     Shifts:
-      "=" -> State<4>
+      "=" -> State<5>
     Reductions:
-      ID | STRING | AAEnd: reduce Args: <empty> #(NonAssoc, 0)
+      ">>" | "2>>" | "2>" | "<" | ">" | ID | STRING | AAEnd: reduce Args: <empty> #(NonAssoc, 0)
   Go To Table:
-    Args -> State<5>
+    Args -> State<6>
   Error Recovery State: <none>
 
 State<3>:
   Grammar Items:
-    Command: "unset" . ID #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: "unset" . ID #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
-      ID -> State<6>
+      ID -> State<7>
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<4>:
   Grammar Items:
-    Command: ID "=" . ID #(NonAssoc, 0): TokenSet{AAEnd}
-    Command: ID "=" . STRING #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: "cd" . ID #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
-      ID -> State<7>
-      STRING -> State<8>
+      ID -> State<8>
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<5>:
   Grammar Items:
-    Command: ID Args .  #(NonAssoc, 0): TokenSet{AAEnd}
-    Args: Args . ID #(NonAssoc, 0): TokenSet{ID, STRING, AAEnd}
-    Args: Args . STRING #(NonAssoc, 0): TokenSet{ID, STRING, AAEnd}
+    CommandAction: ID "=" . ID #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: ID "=" . STRING #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Shifts:
       ID -> State<9>
       STRING -> State<10>
-    Reductions:
-      AAEnd: reduce Command: ID Args #(NonAssoc, 0)
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<6>:
   Grammar Items:
-    Command: "unset" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: ID Args . Input Output ErrOutput #(NonAssoc, 0): TokenSet{AAEnd}
+    Args: Args . ID #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", "<", ">", ID, STRING, AAEnd}
+    Args: Args . STRING #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", "<", ">", ID, STRING, AAEnd}
+    Input: . <empty> #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", ">", AAEnd}
+    Input: . "<" ID #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", ">", AAEnd}
   Parser Action Table:
+    Shifts:
+      "<" -> State<14>
+      ID -> State<12>
+      STRING -> State<13>
     Reductions:
-      AAEnd: reduce Command: "unset" ID #(NonAssoc, 0)
+      ">>" | "2>>" | "2>" | ">" | AAEnd: reduce Input: <empty> #(NonAssoc, 0)
   Go To Table:
-    <empty>
+    Input -> State<11>
   Error Recovery State: <none>
 
 State<7>:
   Grammar Items:
-    Command: ID "=" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: "unset" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Reductions:
-      AAEnd: reduce Command: ID "=" ID #(NonAssoc, 0)
+      AAEnd: reduce CommandAction: "unset" ID #(NonAssoc, 0)
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<8>:
   Grammar Items:
-    Command: ID "=" STRING .  #(NonAssoc, 0): TokenSet{AAEnd}
+    CommandAction: "cd" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Reductions:
-      AAEnd: reduce Command: ID "=" STRING #(NonAssoc, 0)
+      AAEnd: reduce CommandAction: "cd" ID #(NonAssoc, 0)
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<9>:
   Grammar Items:
-    Args: Args ID .  #(NonAssoc, 0): TokenSet{ID, STRING, AAEnd}
+    CommandAction: ID "=" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Reductions:
-      ID | STRING | AAEnd: reduce Args: Args ID #(NonAssoc, 0)
+      AAEnd: reduce CommandAction: ID "=" ID #(NonAssoc, 0)
   Go To Table:
     <empty>
   Error Recovery State: <none>
 
 State<10>:
   Grammar Items:
-    Args: Args STRING .  #(NonAssoc, 0): TokenSet{ID, STRING, AAEnd}
+    CommandAction: ID "=" STRING .  #(NonAssoc, 0): TokenSet{AAEnd}
   Parser Action Table:
     Reductions:
-      ID | STRING | AAEnd: reduce Args: Args STRING #(NonAssoc, 0)
+      AAEnd: reduce CommandAction: ID "=" STRING #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<11>:
+  Grammar Items:
+    CommandAction: ID Args Input . Output ErrOutput #(NonAssoc, 0): TokenSet{AAEnd}
+    Output: . <empty> #(NonAssoc, 0): TokenSet{"2>>", "2>", AAEnd}
+    Output: . ">" ID #(NonAssoc, 0): TokenSet{"2>>", "2>", AAEnd}
+    Output: . ">>" ID #(NonAssoc, 0): TokenSet{"2>>", "2>", AAEnd}
+  Parser Action Table:
+    Shifts:
+      ">>" -> State<17>
+      ">" -> State<16>
+    Reductions:
+      "2>>" | "2>" | AAEnd: reduce Output: <empty> #(NonAssoc, 0)
+  Go To Table:
+    Output -> State<15>
+  Error Recovery State: <none>
+
+State<12>:
+  Grammar Items:
+    Args: Args ID .  #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", "<", ">", ID, STRING, AAEnd}
+  Parser Action Table:
+    Reductions:
+      ">>" | "2>>" | "2>" | "<" | ">" | ID | STRING | AAEnd: reduce Args: Args ID #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<13>:
+  Grammar Items:
+    Args: Args STRING .  #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", "<", ">", ID, STRING, AAEnd}
+  Parser Action Table:
+    Reductions:
+      ">>" | "2>>" | "2>" | "<" | ">" | ID | STRING | AAEnd: reduce Args: Args STRING #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<14>:
+  Grammar Items:
+    Input: "<" . ID #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", ">", AAEnd}
+  Parser Action Table:
+    Shifts:
+      ID -> State<18>
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<15>:
+  Grammar Items:
+    CommandAction: ID Args Input Output . ErrOutput #(NonAssoc, 0): TokenSet{AAEnd}
+    ErrOutput: . <empty> #(NonAssoc, 0): TokenSet{AAEnd}
+    ErrOutput: . "2>" ID #(NonAssoc, 0): TokenSet{AAEnd}
+    ErrOutput: . "2>>" ID #(NonAssoc, 0): TokenSet{AAEnd}
+  Parser Action Table:
+    Shifts:
+      "2>>" -> State<21>
+      "2>" -> State<20>
+    Reductions:
+      AAEnd: reduce ErrOutput: <empty> #(NonAssoc, 0)
+  Go To Table:
+    ErrOutput -> State<19>
+  Error Recovery State: <none>
+
+State<16>:
+  Grammar Items:
+    Output: ">" . ID #(NonAssoc, 0): TokenSet{"2>>", "2>", AAEnd}
+  Parser Action Table:
+    Shifts:
+      ID -> State<22>
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<17>:
+  Grammar Items:
+    Output: ">>" . ID #(NonAssoc, 0): TokenSet{"2>>", "2>", AAEnd}
+  Parser Action Table:
+    Shifts:
+      ID -> State<23>
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<18>:
+  Grammar Items:
+    Input: "<" ID .  #(NonAssoc, 0): TokenSet{">>", "2>>", "2>", ">", AAEnd}
+  Parser Action Table:
+    Reductions:
+      ">>" | "2>>" | "2>" | ">" | AAEnd: reduce Input: "<" ID #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<19>:
+  Grammar Items:
+    CommandAction: ID Args Input Output ErrOutput .  #(NonAssoc, 0): TokenSet{AAEnd}
+  Parser Action Table:
+    Reductions:
+      AAEnd: reduce CommandAction: ID Args Input Output ErrOutput #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<20>:
+  Grammar Items:
+    ErrOutput: "2>" . ID #(NonAssoc, 0): TokenSet{AAEnd}
+  Parser Action Table:
+    Shifts:
+      ID -> State<24>
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<21>:
+  Grammar Items:
+    ErrOutput: "2>>" . ID #(NonAssoc, 0): TokenSet{AAEnd}
+  Parser Action Table:
+    Shifts:
+      ID -> State<25>
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<22>:
+  Grammar Items:
+    Output: ">" ID .  #(NonAssoc, 0): TokenSet{"2>>", "2>", AAEnd}
+  Parser Action Table:
+    Reductions:
+      "2>>" | "2>" | AAEnd: reduce Output: ">" ID #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<23>:
+  Grammar Items:
+    Output: ">>" ID .  #(NonAssoc, 0): TokenSet{"2>>", "2>", AAEnd}
+  Parser Action Table:
+    Reductions:
+      "2>>" | "2>" | AAEnd: reduce Output: ">>" ID #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<24>:
+  Grammar Items:
+    ErrOutput: "2>" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
+  Parser Action Table:
+    Reductions:
+      AAEnd: reduce ErrOutput: "2>" ID #(NonAssoc, 0)
+  Go To Table:
+    <empty>
+  Error Recovery State: <none>
+
+State<25>:
+  Grammar Items:
+    ErrOutput: "2>>" ID .  #(NonAssoc, 0): TokenSet{AAEnd}
+  Parser Action Table:
+    Reductions:
+      AAEnd: reduce ErrOutput: "2>>" ID #(NonAssoc, 0)
   Go To Table:
     <empty>
   Error Recovery State: <none>
