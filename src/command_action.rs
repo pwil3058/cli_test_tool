@@ -101,19 +101,19 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
     }
 }
 
-use std::collections::BTreeSet;
+use lalr1::OrderedSet;
 
-macro_rules! btree_set {
-    () => { BTreeSet::new() };
+macro_rules! ordered_set {
+    () => { OrderedSet::new() };
     ( $( $x:expr ),* ) => {
         {
-            let mut set = BTreeSet::new();
+            let mut set = OrderedSet::new();
             $( set.insert($x); )*
             set
         }
     };
     ( $( $x:expr ),+ , ) => {
-        btree_set![ $( $x ), * ]
+        ordered_set![ $( $x ), * ]
     };
 }
 
@@ -207,41 +207,41 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
         &AALEXAN
     }
 
-    fn viable_error_recovery_states(_token: &AATerminal) -> BTreeSet<u32> {
-        btree_set![]
+    fn viable_error_recovery_states(_token: &AATerminal) -> OrderedSet<u32> {
+        ordered_set![]
     }
 
-    fn look_ahead_set(state: u32) -> BTreeSet<AATerminal> {
+    fn look_ahead_set(state: u32) -> OrderedSet<AATerminal> {
         use AATerminal::*;
         return match state {
-            0 => btree_set![CDIR, UNSET, ID],
-            1 => btree_set![AAEnd],
-            2 => {
-                btree_set![APPEND, ASSIGN, EAPPEND, EOVERWRITE, INPUT, OVERWRITE, ID, STRING, AAEnd]
-            }
-            3 => btree_set![ID],
-            4 => btree_set![ID],
-            5 => btree_set![ID, STRING],
-            6 => btree_set![APPEND, EAPPEND, EOVERWRITE, INPUT, OVERWRITE, ID, STRING, AAEnd],
-            7 => btree_set![AAEnd],
-            8 => btree_set![AAEnd],
-            9 => btree_set![AAEnd],
-            10 => btree_set![AAEnd],
-            11 => btree_set![APPEND, EAPPEND, EOVERWRITE, OVERWRITE, AAEnd],
-            12 => btree_set![APPEND, EAPPEND, EOVERWRITE, INPUT, OVERWRITE, ID, STRING, AAEnd],
-            13 => btree_set![APPEND, EAPPEND, EOVERWRITE, INPUT, OVERWRITE, ID, STRING, AAEnd],
-            14 => btree_set![ID],
-            15 => btree_set![EAPPEND, EOVERWRITE, AAEnd],
-            16 => btree_set![ID],
-            17 => btree_set![ID],
-            18 => btree_set![APPEND, EAPPEND, EOVERWRITE, OVERWRITE, AAEnd],
-            19 => btree_set![AAEnd],
-            20 => btree_set![ID],
-            21 => btree_set![ID],
-            22 => btree_set![EAPPEND, EOVERWRITE, AAEnd],
-            23 => btree_set![EAPPEND, EOVERWRITE, AAEnd],
-            24 => btree_set![AAEnd],
-            25 => btree_set![AAEnd],
+            0 => ordered_set![CDIR, UNSET, ID],
+            1 => ordered_set![AAEnd],
+            2 => ordered_set![
+                APPEND, ASSIGN, EAPPEND, EOVERWRITE, INPUT, OVERWRITE, ID, STRING, AAEnd
+            ],
+            3 => ordered_set![ID],
+            4 => ordered_set![ID],
+            5 => ordered_set![ID, STRING],
+            6 => ordered_set![APPEND, EAPPEND, EOVERWRITE, INPUT, OVERWRITE, ID, STRING, AAEnd],
+            7 => ordered_set![AAEnd],
+            8 => ordered_set![AAEnd],
+            9 => ordered_set![AAEnd],
+            10 => ordered_set![AAEnd],
+            11 => ordered_set![APPEND, EAPPEND, EOVERWRITE, OVERWRITE, AAEnd],
+            12 => ordered_set![APPEND, EAPPEND, EOVERWRITE, INPUT, OVERWRITE, ID, STRING, AAEnd],
+            13 => ordered_set![APPEND, EAPPEND, EOVERWRITE, INPUT, OVERWRITE, ID, STRING, AAEnd],
+            14 => ordered_set![ID],
+            15 => ordered_set![EAPPEND, EOVERWRITE, AAEnd],
+            16 => ordered_set![ID],
+            17 => ordered_set![ID],
+            18 => ordered_set![APPEND, EAPPEND, EOVERWRITE, OVERWRITE, AAEnd],
+            19 => ordered_set![AAEnd],
+            20 => ordered_set![ID],
+            21 => ordered_set![ID],
+            22 => ordered_set![EAPPEND, EOVERWRITE, AAEnd],
+            23 => ordered_set![EAPPEND, EOVERWRITE, AAEnd],
+            24 => ordered_set![AAEnd],
+            25 => ordered_set![AAEnd],
             _ => panic!("illegal state: {state}"),
         };
     }
