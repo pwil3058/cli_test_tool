@@ -1,5 +1,5 @@
 %{
-// Copyright (c) Peter Williams <pwil3058@bigpond.net.au> <pwil3058@gmail.com>
+// Copyright 2026 (c) Peter Williams <pwil3058@bigpond.net.au> <pwil3058@gmail.com>
 
 use lalr1;
 use lexan;
@@ -104,7 +104,7 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 %%
 
 %token  EOL         (\n)
-%token  STRING      ("(\\"|[^"\t\r\n\v\f])+")
+%token  STRING      ("(\\"|[^"\r\n\v\f])+")
 %token  ID          ([\w\d._\-/:]+)
 %token  ASSIGN      "="
 %token  INPUT       "<"

@@ -128,7 +128,6 @@ mod command_tests {
     fn new_command() {
         use CommandAction::*;
         let cmd = Command::new("whatever x y < bbb > aaa").unwrap();
-        println!("{:?}", cmd);
         match &cmd.cmd_action {
             RunProgram(program_name, args, input_path, output_path, err_output_path) => {
                 assert_eq!(program_name, "whatever");
