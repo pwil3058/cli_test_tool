@@ -43,7 +43,7 @@ pub struct Command {
 impl Command {
     pub fn new(cmd_line_string: &str) -> Result<Self, &'static str> {
         let mut cmd_action: CommandAction = Default::default();
-        if let Err(_) = cmd_action.parse_text(cmd_line_string, "command") {
+        if cmd_action.parse_text(cmd_line_string, "command").is_err() {
             return Err("Command not parseable");
         };
         Ok(Self {
@@ -56,16 +56,16 @@ impl Command {
         use CommandAction::*;
         match &self.cmd_action {
             SetEnvVar(var, value) => {
-                env_vars.set_var(&var, &value);
+                env_vars.set_var(var, value);
                 Ok(Outcome::default())
             }
             UnsetEnvVar(var) => {
-                env_vars.remove_var(&var);
+                env_vars.remove_var(var);
                 Ok(Outcome::default())
             }
             ChangeDir(dir) => {
-                env::set_current_dir(&dir)?;
-                let _ = env_vars.set_var("PWD", &env::current_dir()?.to_string_lossy());
+                env::set_current_dir(dir)?;
+                env_vars.set_var("PWD", &env::current_dir()?.to_string_lossy());
                 Ok(Outcome::default())
             }
             RunProgram(program_name, args, input_path, output_path, err_output_path) => {
@@ -80,7 +80,6 @@ impl Command {
                         } else {
                             let file = std::fs::OpenOptions::new()
                                 .append(true)
-                                .write(true)
                                 .create(true)
                                 .open(path)?;
                             std::process::Stdio::from(file)
@@ -95,7 +94,6 @@ impl Command {
                         } else {
                             let file = std::fs::OpenOptions::new()
                                 .append(true)
-                                .write(true)
                                 .create(true)
                                 .open(path)?;
                             std::process::Stdio::from(file)

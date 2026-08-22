@@ -1,9 +1,6 @@
 %{
 // Copyright 2026 (c) Peter Williams <pwil3058@bigpond.net.au> <pwil3058@gmail.com>
-
-use lalr1;
-use lexan;
-
+//
 #[allow(dead_code)]
 #[derive(Debug, Default, PartialEq, Eq)]
 pub enum CommandAction {
@@ -81,8 +78,8 @@ impl AttributeData {
 impl From<lexan::Token<AATerminal>> for AttributeData {
     fn from(input: lexan::Token<AATerminal>) -> Self {
         match input.tag() {
-            AATerminal::STRING => AttributeData::String(input.lexeme().to_string()),
-            AATerminal::ID => AttributeData::Id(input.lexeme().to_string()),
+            AATerminal::String => AttributeData::String(input.lexeme().to_string()),
+            AATerminal::Id => AttributeData::Id(input.lexeme().to_string()),
             _ => AttributeData::Token(input.clone())
         }
     }
@@ -103,36 +100,36 @@ impl From<lalr1::Error<AATerminal>> for AttributeData {
 
 %%
 
-%token  EOL         (\n)
-%token  STRING      ("(\\"|[^"\r\n\v\f])+")
-%token  ID          ([\w\d._\-/:]+)
-%token  ASSIGN      "="
-%token  INPUT       "<"
-%token  OVERWRITE   ">"
-%token  APPEND      ">>"
-%token  EOVERWRITE  "2>"
-%token  EAPPEND     "2>>"
-%token  UNSET       "unset"
-%token  CDIR        "cd"
+%token  Eol         (\n)
+%token  String      ("(\\"|[^"\r\n\v\f])+")
+%token  Id          ([\w\d._\-/:]+)
+%token  Assign      "="
+%token  InputFile   "<"
+%token  OverWrite   ">"
+%token  Append      ">>"
+%token  EOverWrite  "2>"
+%token  EAppend     "2>>"
+%token  Unset       "unset"
+%token  ChangeDir   "cd"
 
 %skip ([ \t]+)
 
 %%
 
 CommandAction:
-    ID "=" ID !{
+    Id "=" Id !{
         *self = CommandAction::SetEnvVar($1.id(), $3.id());
     !}
-    | ID "=" STRING !{
+    | Id "=" String !{
         *self = CommandAction::SetEnvVar($1.id(), $3.string());
     !}
-    | "unset" ID !{
+    | "unset" Id !{
         *self = CommandAction::UnsetEnvVar($2.id());
     !}
-    | "cd" ID !{
+    | "cd" Id !{
         *self = CommandAction::ChangeDir($2.id());
     !}
-    | ID Args Input Output ErrOutput !{
+    | Id Args Input Output ErrOutput !{
         *self = CommandAction::RunProgram(
             $1.id(),
             $2.args(),
@@ -146,25 +143,25 @@ CommandAction:
 Args: !{
         $$ = AttributeData::Args(vec![]);
     !}
-    | Args ID !{
+    | Args Id !{
         $$.args_mut().push($2.id())
     !}
-    | Args STRING!{
+    | Args String!{
         $$.args_mut().push($2.string())
     !}
     .
 
 Input: !{ $$ = AttributeData::Input(None); !}
-    | "<" ID !{ $$ = AttributeData::Input(Some($2.id())); !}
+    | "<" Id !{ $$ = AttributeData::Input(Some($2.id())); !}
     .
 
 Output: !{ $$ = AttributeData::Output(None); !}
-    | ">" ID !{ $$ = AttributeData::Output(Some(($2.id(), true))); !}
-    | ">>" ID !{ $$ = AttributeData::Output(Some(($2.id(), false))); !}
+    | ">" Id !{ $$ = AttributeData::Output(Some(($2.id(), true))); !}
+    | ">>" Id !{ $$ = AttributeData::Output(Some(($2.id(), false))); !}
     .
 
 ErrOutput: !{ $$ = AttributeData::Output(None); !}
-    | "2>" ID !{ $$ = AttributeData::Output(Some(($2.id(), true))); !}
-    | "2>>" ID !{ $$ = AttributeData::Output(Some(($2.id(), false))); !}
+    | "2>" Id !{ $$ = AttributeData::Output(Some(($2.id(), true))); !}
+    | "2>>" Id !{ $$ = AttributeData::Output(Some(($2.id(), false))); !}
     .
 

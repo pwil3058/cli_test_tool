@@ -9,7 +9,7 @@ fn main() {
         Ok(generator) => match generator.write_parser_code_to_file("src/command_action.rs") {
             Ok(_) => {
                 Command::new("rustfmt")
-                    .args(&["src/command_action.rs"])
+                    .args(["src/command_action.rs"])
                     .status()
                     .expect("prebuild: cargo run rustfmt failed");
             }
