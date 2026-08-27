@@ -247,10 +247,15 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
         }
     }
 
-    fn next_action(&self, aa_state: u32, aa_token: &lexan::Token<AATerminal>) -> lalr1::Action {
+    fn next_action(
+        &self,
+        aa_parse_stack: &lalr1::ParseStack<AATerminal, AANonTerminal, AttributeData>,
+        aa_token: &lexan::Token<AATerminal>,
+    ) -> lalr1::Action {
         use lalr1::Action;
         use AATerminal::*;
         let aa_tag = *aa_token.tag();
+        let aa_state = aa_parse_stack.current_state();
         match aa_state {
             0 => match aa_tag {
                 ChangeDir => Action::Shift(4),
