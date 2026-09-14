@@ -2,7 +2,6 @@
 
 // Copyright 2026 (c) Peter Williams <pwil3058@bigpond.net.au> <pwil3058@gmail.com>
 //
-#[allow(dead_code)]
 #[derive(Debug, Default, PartialEq, Eq)]
 pub enum CommandAction {
     SetEnvVar(String, String),
@@ -22,13 +21,10 @@ pub enum CommandAction {
 #[cfg(test)]
 pub mod parser_tests;
 
-impl lalr1::ReportError<AATerminal> for CommandAction {}
+impl lalr1::ReportParseError<AATerminal> for CommandAction {}
 
-#[allow(dead_code)]
 #[derive(Debug, Default, Clone)]
 pub enum AttributeData {
-    Token(lexan::Token<AATerminal>),
-    Error(lalr1::Error<AATerminal>),
     String(String),
     Id(String),
     Args(Vec<String>),
@@ -87,18 +83,22 @@ impl From<lexan::Token<AATerminal>> for AttributeData {
         match input.tag() {
             AATerminal::String => AttributeData::String(input.lexeme().to_string()),
             AATerminal::Id => AttributeData::Id(input.lexeme().to_string()),
-            _ => AttributeData::Token(input.clone()),
+            _ => AttributeData::Default,
         }
     }
 }
 
-impl From<lalr1::Error<AATerminal>> for AttributeData {
-    fn from(error: lalr1::Error<AATerminal>) -> Self {
-        AttributeData::Error(error.clone())
+impl From<lalr1::SyntaxError<AATerminal>> for AttributeData {
+    fn from(_error: lalr1::SyntaxError<AATerminal>) -> Self {
+        AttributeData::Default
     }
 }
 
-use lalr1::OrderedSet;
+use std::sync::LazyLock;
+
+use lexan::{lexicon, LexicalAnalyzer, TokenStream};
+
+use lalr1::{Error, OrderedSet};
 
 macro_rules! ordered_set {
     () => { OrderedSet::new() };
@@ -114,8 +114,9 @@ macro_rules! ordered_set {
     };
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub enum AATerminal {
+    #[default]
     AAEnd,
     Append,
     Assign,
@@ -149,8 +150,8 @@ impl std::fmt::Display for AATerminal {
     }
 }
 
-lazy_static::lazy_static! {
-    static ref AALEXAN: lexan::LexicalAnalyzer<AATerminal> = {
+static AALEXAN: LazyLock<Result<LexicalAnalyzer<AATerminal>, lexicon::Error<AATerminal>>> =
+    LazyLock::new(|| {
         use AATerminal::*;
         lexan::LexicalAnalyzer::new(
             &[
@@ -168,13 +169,10 @@ lazy_static::lazy_static! {
                 (Id, r###"([\w\d._\-/:]+)"###),
                 (Eol, r###"(\n)"###),
             ],
-            &[
-                r###"([ \t]+)"###,
-            ],
+            &[r###"([ \t]+)"###],
             AAEnd,
         )
-    };
-}
+    });
 
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub enum AANonTerminal {
@@ -200,8 +198,13 @@ impl std::fmt::Display for AANonTerminal {
 }
 
 impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
-    fn lexical_analyzer(&self) -> &lexan::LexicalAnalyzer<AATerminal> {
-        &AALEXAN
+    fn token_stream(
+        &self,
+        text: &str,
+        label: &str,
+    ) -> Result<TokenStream<AATerminal>, Error<AATerminal>> {
+        let lexical_analyzer = AALEXAN.as_ref().map_err(|e| e.clone())?;
+        Ok(lexical_analyzer.token_stream(text, label))
     }
 
     fn viable_error_recovery_states(_token: &AATerminal) -> OrderedSet<u32> {

@@ -5,6 +5,7 @@ use lalr1_lib::ParserGenerator;
 
 fn main() {
     println!("cargo:rerun-if-changed=src/command_action.laps");
+    println!("cargo:rerun-if-changed=lalr1_lib::ParserGenerator");
     match ParserGenerator::new("src/command_action.laps") {
         Ok(generator) => match generator.write_parser_code_to_file("src/command_action.rs") {
             Ok(_) => {

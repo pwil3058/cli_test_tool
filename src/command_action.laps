@@ -1,7 +1,6 @@
 %{
 // Copyright 2026 (c) Peter Williams <pwil3058@bigpond.net.au> <pwil3058@gmail.com>
 //
-#[allow(dead_code)]
 #[derive(Debug, Default, PartialEq, Eq)]
 pub enum CommandAction {
     SetEnvVar(String, String),
@@ -15,13 +14,10 @@ pub enum CommandAction {
 #[cfg(test)]
 pub mod parser_tests;
 
-impl lalr1::ReportError<AATerminal> for CommandAction {}
+impl lalr1::ReportParseError<AATerminal> for CommandAction {}
 
-#[allow(dead_code)]
 #[derive(Debug, Default, Clone)]
 pub enum AttributeData {
-    Token(lexan::Token<AATerminal>),
-    Error(lalr1::Error<AATerminal>),
     String(String),
     Id(String),
     Args(Vec<String>),
@@ -80,14 +76,14 @@ impl From<lexan::Token<AATerminal>> for AttributeData {
         match input.tag() {
             AATerminal::String => AttributeData::String(input.lexeme().to_string()),
             AATerminal::Id => AttributeData::Id(input.lexeme().to_string()),
-            _ => AttributeData::Token(input.clone())
+            _ => AttributeData::Default
         }
     }
 }
 
-impl From<lalr1::Error<AATerminal>> for AttributeData {
-    fn from(error: lalr1::Error<AATerminal>) -> Self {
-        AttributeData::Error(error.clone())
+impl From<lalr1::SyntaxError<AATerminal>> for AttributeData {
+    fn from(_error: lalr1::SyntaxError<AATerminal>) -> Self {
+        AttributeData::Default
     }
 }
 
