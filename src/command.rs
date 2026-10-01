@@ -125,7 +125,7 @@ mod command_tests {
     #[test]
     fn new_command() {
         use CommandAction::*;
-        let cmd = Command::new("whatever x y < bbb > aaa").unwrap();
+        let cmd = Command::new("whatever x y < bbb > aaa\n").unwrap();
         match &cmd.cmd_action {
             RunProgram(program_name, args, input_path, output_path, err_output_path) => {
                 assert_eq!(program_name, "whatever");
@@ -142,8 +142,15 @@ mod command_tests {
     }
 
     #[test]
+    fn ls_test() {
+        use CommandAction::*;
+        let cmd = Command::new(" ls > /dev/null\n");
+        assert!(cmd.is_ok())
+    }
+
+    #[test]
     fn set_var_test() {
-        let cmd = Command::new("MYNAME=Peter").unwrap();
+        let cmd = Command::new("MYNAME=Peter\n").unwrap();
         let env_vars = &mut EnvVars::new();
         let result = cmd.run(env_vars);
         println!("{:?}", result);
@@ -158,3 +165,6 @@ mod command_tests {
         assert_eq!(env_vars.var("MYNAME").unwrap(), "Peter");
     }
 }
+
+#[cfg(test)]
+pub mod parser_tests;

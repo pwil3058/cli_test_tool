@@ -148,9 +148,13 @@ impl Script {
                             expected_outcome.e_code = Some(i32::from_str(trimmed)?);
                         }
                     } else if let Some(trimmed) = line.strip_prefix('!') {
-                        expected_outcome.std_err.push_str(trimmed.trim_start());
+                        expected_outcome
+                            .std_err
+                            .push_str(trimmed.strip_prefix(" ").unwrap());
                     } else if let Some(trimmed) = line.strip_prefix('>') {
-                        expected_outcome.std_out.push_str(trimmed.trim_start());
+                        expected_outcome
+                            .std_out
+                            .push_str(trimmed.strip_prefix(" ").unwrap());
                     }
                     i += 1;
                 }

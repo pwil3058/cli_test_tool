@@ -11,9 +11,6 @@ pub enum CommandAction {
     Default,
 }
 
-#[cfg(test)]
-pub mod parser_tests;
-
 impl lalr1::ReportParseError<AATerminal> for CommandAction {}
 
 #[derive(Debug, Default, Clone)]
@@ -74,7 +71,15 @@ impl AttributeData {
 impl From<lexan::Token<AATerminal>> for AttributeData {
     fn from(input: lexan::Token<AATerminal>) -> Self {
         match input.tag() {
-            AATerminal::String => AttributeData::String(input.lexeme().to_string()),
+            AATerminal::String => {
+                let lexeme = input.lexeme();
+                let clean_string = if lexeme.starts_with('"') && lexeme.ends_with('"') && lexeme.len() >= 2 {
+                    lexeme[1..lexeme.len() - 1].to_string()
+                } else {
+                    lexeme.to_string()
+                };
+                 AttributeData::String(clean_string)
+           },
             AATerminal::Id => AttributeData::Id(input.lexeme().to_string()),
             _ => AttributeData::Default
         }
@@ -97,7 +102,7 @@ impl From<lalr1::SyntaxError<AATerminal>> for AttributeData {
 %%
 
 %token  Eol         (\n)
-%token  String      ("(\\"|[^"\r\n\v\f])+")
+%token  String      ("(\\"|[^"])+")
 %token  Id          ([\w\d._\-/:]+)
 %token  Assign      "="
 %token  InputFile   "<"
@@ -113,19 +118,19 @@ impl From<lalr1::SyntaxError<AATerminal>> for AttributeData {
 %%
 
 CommandAction:
-    Id "=" Id !{
+    Id "=" Id Eol !{
         *self = CommandAction::SetEnvVar($1.id(), $3.id());
     !}
-    | Id "=" String !{
+    | Id "=" String Eol !{
         *self = CommandAction::SetEnvVar($1.id(), $3.string());
     !}
-    | "unset" Id !{
+    | "unset" Id Eol !{
         *self = CommandAction::UnsetEnvVar($2.id());
     !}
-    | "cd" Id !{
+    | "cd" Id Eol !{
         *self = CommandAction::ChangeDir($2.id());
     !}
-    | Id Args Input Output ErrOutput !{
+    | Id Args Input Output ErrOutput Eol !{
         *self = CommandAction::RunProgram(
             $1.id(),
             $2.args(),
@@ -142,8 +147,12 @@ Args: !{
     | Args Id !{
         $$.args_mut().push($2.id())
     !}
-    | Args String!{
+    | Args String !{
         $$.args_mut().push($2.string())
+    !}
+    | Args Id "=" Id !{
+        let reconstructed_flag = format!("{}={}", $2.id(), $4.id());
+        $$.args_mut().push(reconstructed_flag);
     !}
     .
 
