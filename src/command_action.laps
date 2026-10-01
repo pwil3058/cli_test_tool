@@ -20,6 +20,7 @@ pub enum AttributeData {
     Args(Vec<String>),
     Input(Option<String>),
     Output(Option<(String, bool)>),
+    Assign(String),
     #[default]
     Default
 }
@@ -60,6 +61,13 @@ impl AttributeData {
         }
     }
 
+    fn assign(&self) -> String {
+        match self {
+            Self::Assign(s) => s.clone(),
+            _ => panic!("Invalid AttributeData variant: expected Assign")
+        }
+    }
+
     fn id(&self) -> String {
         match self {
             Self::Id(string) => string.clone(),
@@ -79,7 +87,8 @@ impl From<lexan::Token<AATerminal>> for AttributeData {
                     lexeme.to_string()
                 };
                  AttributeData::String(clean_string)
-           },
+            },
+            AATerminal::Assign => AttributeData::Assign(input.lexeme().to_string()),
             AATerminal::Id => AttributeData::Id(input.lexeme().to_string()),
             _ => AttributeData::Default
         }
@@ -104,7 +113,7 @@ impl From<lalr1::SyntaxError<AATerminal>> for AttributeData {
 %token  Eol         (\n)
 %token  String      ("(\\"|[^"])+")
 %token  Id          ([\w\d._\-/:]+)
-%token  Assign      "="
+%token  Assign      ([\w\d._\-/:]+=(([\w\d._\-/:]+)|("(\\"|[^"])+")))
 %token  InputFile   "<"
 %token  OverWrite   ">"
 %token  Append      ">>"
@@ -118,11 +127,17 @@ impl From<lalr1::SyntaxError<AATerminal>> for AttributeData {
 %%
 
 CommandAction:
-    Id "=" Id Eol !{
-        *self = CommandAction::SetEnvVar($1.id(), $3.id());
-    !}
-    | Id "=" String Eol !{
-        *self = CommandAction::SetEnvVar($1.id(), $3.string());
+    Assign Eol !{
+        let string = $1.assign();
+        let mut parts = string.split('=');
+        let id = parts.next().unwrap().to_string();
+        let value = parts.next().unwrap();
+        let value = if value.starts_with('"') && value.ends_with('"') && value.len() >= 2 {
+            value[1..value.len() - 1].to_string()
+        } else {
+            value.to_string()
+        };
+        *self = CommandAction::SetEnvVar(id, value);
     !}
     | "unset" Id Eol !{
         *self = CommandAction::UnsetEnvVar($2.id());
@@ -150,9 +165,8 @@ Args: !{
     | Args String !{
         $$.args_mut().push($2.string())
     !}
-    | Args Id "=" Id !{
-        let reconstructed_flag = format!("{}={}", $2.id(), $4.id());
-        $$.args_mut().push(reconstructed_flag);
+    | Args Assign !{
+        $$.args_mut().push($2.assign())
     !}
     .
 

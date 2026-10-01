@@ -27,6 +27,7 @@ pub enum AttributeData {
     Args(Vec<String>),
     Input(Option<String>),
     Output(Option<(String, bool)>),
+    Assign(String),
     #[default]
     Default,
 }
@@ -67,6 +68,13 @@ impl AttributeData {
         }
     }
 
+    fn assign(&self) -> String {
+        match self {
+            Self::Assign(s) => s.clone(),
+            _ => panic!("Invalid AttributeData variant: expected Assign"),
+        }
+    }
+
     fn id(&self) -> String {
         match self {
             Self::Id(string) => string.clone(),
@@ -88,6 +96,7 @@ impl From<lexan::Token<AATerminal>> for AttributeData {
                     };
                 AttributeData::String(clean_string)
             }
+            AATerminal::Assign => AttributeData::Assign(input.lexeme().to_string()),
             AATerminal::Id => AttributeData::Id(input.lexeme().to_string()),
             _ => AttributeData::Default,
         }
@@ -142,7 +151,7 @@ impl std::fmt::Display for AATerminal {
         match self {
             AATerminal::AAEnd => write!(f, r###"AAEnd"###),
             AATerminal::Append => write!(f, r###"">>""###),
-            AATerminal::Assign => write!(f, r###""=""###),
+            AATerminal::Assign => write!(f, r###"Assign"###),
             AATerminal::ChangeDir => write!(f, r###""cd""###),
             AATerminal::EAppend => write!(f, r###""2>>""###),
             AATerminal::EOverWrite => write!(f, r###""2>""###),
@@ -164,7 +173,6 @@ static AALEXAN: LazyLock<Result<LexicalAnalyzer<AATerminal>, lexicon::Error<AATe
                 (EOverWrite, r###"2>"###),
                 (EAppend, r###"2>>"###),
                 (InputFile, r###"<"###),
-                (Assign, r###"="###),
                 (OverWrite, r###">"###),
                 (Append, r###">>"###),
                 (ChangeDir, r###"cd"###),
@@ -173,6 +181,10 @@ static AALEXAN: LazyLock<Result<LexicalAnalyzer<AATerminal>, lexicon::Error<AATe
             &[
                 (String, r###"("(\\"|[^"])+")"###),
                 (Id, r###"([\w\d._\-/:]+)"###),
+                (
+                    Assign,
+                    r###"([\w\d._\-/:]+=(([\w\d._\-/:]+)|("(\\"|[^"])+")))"###,
+                ),
                 (Eol, r###"(\n)"###),
             ],
             &[r###"([ \t]+)"###],
@@ -220,43 +232,45 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
     fn look_ahead_set(state: u32) -> OrderedSet<AATerminal> {
         use AATerminal::*;
         match state {
-            0 => ordered_set![ChangeDir, Unset, Id],
+            0 => ordered_set![ChangeDir, Unset, Assign, Id],
             1 => ordered_set![AAEnd],
-            2 => ordered_set![
-                Append, Assign, EAppend, EOverWrite, InputFile, OverWrite, Eol, Id, String
-            ],
+            2 => ordered_set![Eol],
             3 => ordered_set![Id],
             4 => ordered_set![Id],
-            5 => ordered_set![Id, String],
-            6 => ordered_set![Append, EAppend, EOverWrite, InputFile, OverWrite, Eol, Id, String],
+            5 => ordered_set![
+                Append, EAppend, EOverWrite, InputFile, OverWrite, Assign, Eol, Id, String
+            ],
+            6 => ordered_set![AAEnd],
             7 => ordered_set![Eol],
             8 => ordered_set![Eol],
-            9 => ordered_set![Eol],
-            10 => ordered_set![Eol],
-            11 => ordered_set![Append, EAppend, EOverWrite, OverWrite, Eol],
-            12 => ordered_set![
-                Append, Assign, EAppend, EOverWrite, InputFile, OverWrite, Eol, Id, String
+            9 => ordered_set![
+                Append, EAppend, EOverWrite, InputFile, OverWrite, Assign, Eol, Id, String
             ],
-            13 => ordered_set![Append, EAppend, EOverWrite, InputFile, OverWrite, Eol, Id, String],
-            14 => ordered_set![Id],
-            15 => ordered_set![AAEnd],
-            16 => ordered_set![AAEnd],
-            17 => ordered_set![AAEnd],
-            18 => ordered_set![AAEnd],
-            19 => ordered_set![EAppend, EOverWrite, Eol],
-            20 => ordered_set![Id],
-            21 => ordered_set![Id],
+            10 => ordered_set![AAEnd],
+            11 => ordered_set![AAEnd],
+            12 => ordered_set![Append, EAppend, EOverWrite, OverWrite, Eol],
+            13 => ordered_set![
+                Append, EAppend, EOverWrite, InputFile, OverWrite, Assign, Eol, Id, String
+            ],
+            14 => ordered_set![
+                Append, EAppend, EOverWrite, InputFile, OverWrite, Assign, Eol, Id, String
+            ],
+            15 => ordered_set![
+                Append, EAppend, EOverWrite, InputFile, OverWrite, Assign, Eol, Id, String
+            ],
+            16 => ordered_set![Id],
+            17 => ordered_set![EAppend, EOverWrite, Eol],
+            18 => ordered_set![Id],
+            19 => ordered_set![Id],
+            20 => ordered_set![Append, EAppend, EOverWrite, OverWrite, Eol],
+            21 => ordered_set![Eol],
             22 => ordered_set![Id],
-            23 => ordered_set![Append, EAppend, EOverWrite, OverWrite, Eol],
-            24 => ordered_set![Eol],
-            25 => ordered_set![Id],
-            26 => ordered_set![Id],
-            27 => ordered_set![EAppend, EOverWrite, Eol],
-            28 => ordered_set![EAppend, EOverWrite, Eol],
-            29 => ordered_set![Append, EAppend, EOverWrite, InputFile, OverWrite, Eol, Id, String],
-            30 => ordered_set![AAEnd],
-            31 => ordered_set![Eol],
-            32 => ordered_set![Eol],
+            23 => ordered_set![Id],
+            24 => ordered_set![EAppend, EOverWrite, Eol],
+            25 => ordered_set![EAppend, EOverWrite, Eol],
+            26 => ordered_set![AAEnd],
+            27 => ordered_set![Eol],
+            28 => ordered_set![Eol],
             _ => panic!("illegal state: {state}"),
         }
     }
@@ -274,7 +288,8 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
             0 => match aa_tag {
                 ChangeDir => Action::Shift(4),
                 Unset => Action::Shift(3),
-                Id => Action::Shift(2),
+                Assign => Action::Shift(2),
+                Id => Action::Shift(5),
                 _ => Action::SyntaxError,
             },
             1 => match aa_tag {
@@ -283,11 +298,7 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
                 _ => Action::SyntaxError,
             },
             2 => match aa_tag {
-                Assign => Action::Shift(5),
-                // Args: <empty> #(NonAssoc, 0)
-                Append | EAppend | EOverWrite | InputFile | OverWrite | Eol | Id | String => {
-                    Action::Reduce(6)
-                }
+                Eol => Action::Shift(6),
                 _ => Action::SyntaxError,
             },
             3 => match aa_tag {
@@ -299,146 +310,127 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
                 _ => Action::SyntaxError,
             },
             5 => match aa_tag {
-                Id => Action::Shift(9),
-                String => Action::Shift(10),
+                // Args: <empty> #(NonAssoc, 0)
+                Append | EAppend | EOverWrite | InputFile | OverWrite | Assign | Eol | Id
+                | String => Action::Reduce(5),
                 _ => Action::SyntaxError,
             },
             6 => match aa_tag {
-                InputFile => Action::Shift(14),
-                Id => Action::Shift(12),
-                String => Action::Shift(13),
-                // Input: <empty> #(NonAssoc, 0)
-                Append | EAppend | EOverWrite | OverWrite | Eol => Action::Reduce(10),
-                _ => Action::SyntaxError,
-            },
-            7 => match aa_tag {
-                Eol => Action::Shift(15),
-                _ => Action::SyntaxError,
-            },
-            8 => match aa_tag {
-                Eol => Action::Shift(16),
-                _ => Action::SyntaxError,
-            },
-            9 => match aa_tag {
-                Eol => Action::Shift(17),
-                _ => Action::SyntaxError,
-            },
-            10 => match aa_tag {
-                Eol => Action::Shift(18),
-                _ => Action::SyntaxError,
-            },
-            11 => match aa_tag {
-                Append => Action::Shift(21),
-                OverWrite => Action::Shift(20),
-                // Output: <empty> #(NonAssoc, 0)
-                EAppend | EOverWrite | Eol => Action::Reduce(12),
-                _ => Action::SyntaxError,
-            },
-            12 => match aa_tag {
-                Assign => Action::Shift(22),
-                // Args: Args Id #(NonAssoc, 0)
-                Append | EAppend | EOverWrite | InputFile | OverWrite | Eol | Id | String => {
-                    Action::Reduce(7)
-                }
-                _ => Action::SyntaxError,
-            },
-            13 => match aa_tag {
-                // Args: Args String #(NonAssoc, 0)
-                Append | EAppend | EOverWrite | InputFile | OverWrite | Eol | Id | String => {
-                    Action::Reduce(8)
-                }
-                _ => Action::SyntaxError,
-            },
-            14 => match aa_tag {
-                Id => Action::Shift(23),
-                _ => Action::SyntaxError,
-            },
-            15 => match aa_tag {
-                // CommandAction: "unset" Id Eol #(NonAssoc, 0)
-                AAEnd => Action::Reduce(3),
-                _ => Action::SyntaxError,
-            },
-            16 => match aa_tag {
-                // CommandAction: "cd" Id Eol #(NonAssoc, 0)
-                AAEnd => Action::Reduce(4),
-                _ => Action::SyntaxError,
-            },
-            17 => match aa_tag {
-                // CommandAction: Id "=" Id Eol #(NonAssoc, 0)
+                // CommandAction: Assign Eol #(NonAssoc, 0)
                 AAEnd => Action::Reduce(1),
                 _ => Action::SyntaxError,
             },
-            18 => match aa_tag {
-                // CommandAction: Id "=" String Eol #(NonAssoc, 0)
+            7 => match aa_tag {
+                Eol => Action::Shift(10),
+                _ => Action::SyntaxError,
+            },
+            8 => match aa_tag {
+                Eol => Action::Shift(11),
+                _ => Action::SyntaxError,
+            },
+            9 => match aa_tag {
+                InputFile => Action::Shift(16),
+                Assign => Action::Shift(15),
+                Id => Action::Shift(13),
+                String => Action::Shift(14),
+                // Input: <empty> #(NonAssoc, 0)
+                Append | EAppend | EOverWrite | OverWrite | Eol => Action::Reduce(9),
+                _ => Action::SyntaxError,
+            },
+            10 => match aa_tag {
+                // CommandAction: "unset" Id Eol #(NonAssoc, 0)
                 AAEnd => Action::Reduce(2),
                 _ => Action::SyntaxError,
             },
-            19 => match aa_tag {
-                EAppend => Action::Shift(26),
-                EOverWrite => Action::Shift(25),
+            11 => match aa_tag {
+                // CommandAction: "cd" Id Eol #(NonAssoc, 0)
+                AAEnd => Action::Reduce(3),
+                _ => Action::SyntaxError,
+            },
+            12 => match aa_tag {
+                Append => Action::Shift(19),
+                OverWrite => Action::Shift(18),
+                // Output: <empty> #(NonAssoc, 0)
+                EAppend | EOverWrite | Eol => Action::Reduce(11),
+                _ => Action::SyntaxError,
+            },
+            13 => match aa_tag {
+                // Args: Args Id #(NonAssoc, 0)
+                Append | EAppend | EOverWrite | InputFile | OverWrite | Assign | Eol | Id
+                | String => Action::Reduce(6),
+                _ => Action::SyntaxError,
+            },
+            14 => match aa_tag {
+                // Args: Args String #(NonAssoc, 0)
+                Append | EAppend | EOverWrite | InputFile | OverWrite | Assign | Eol | Id
+                | String => Action::Reduce(7),
+                _ => Action::SyntaxError,
+            },
+            15 => match aa_tag {
+                // Args: Args Assign #(NonAssoc, 0)
+                Append | EAppend | EOverWrite | InputFile | OverWrite | Assign | Eol | Id
+                | String => Action::Reduce(8),
+                _ => Action::SyntaxError,
+            },
+            16 => match aa_tag {
+                Id => Action::Shift(20),
+                _ => Action::SyntaxError,
+            },
+            17 => match aa_tag {
+                EAppend => Action::Shift(23),
+                EOverWrite => Action::Shift(22),
                 // ErrOutput: <empty> #(NonAssoc, 0)
-                Eol => Action::Reduce(15),
+                Eol => Action::Reduce(14),
+                _ => Action::SyntaxError,
+            },
+            18 => match aa_tag {
+                Id => Action::Shift(24),
+                _ => Action::SyntaxError,
+            },
+            19 => match aa_tag {
+                Id => Action::Shift(25),
                 _ => Action::SyntaxError,
             },
             20 => match aa_tag {
-                Id => Action::Shift(27),
+                // Input: "<" Id #(NonAssoc, 0)
+                Append | EAppend | EOverWrite | OverWrite | Eol => Action::Reduce(10),
                 _ => Action::SyntaxError,
             },
             21 => match aa_tag {
-                Id => Action::Shift(28),
+                Eol => Action::Shift(26),
                 _ => Action::SyntaxError,
             },
             22 => match aa_tag {
-                Id => Action::Shift(29),
+                Id => Action::Shift(27),
                 _ => Action::SyntaxError,
             },
             23 => match aa_tag {
-                // Input: "<" Id #(NonAssoc, 0)
-                Append | EAppend | EOverWrite | OverWrite | Eol => Action::Reduce(11),
+                Id => Action::Shift(28),
                 _ => Action::SyntaxError,
             },
             24 => match aa_tag {
-                Eol => Action::Shift(30),
+                // Output: ">" Id #(NonAssoc, 0)
+                EAppend | EOverWrite | Eol => Action::Reduce(12),
                 _ => Action::SyntaxError,
             },
             25 => match aa_tag {
-                Id => Action::Shift(31),
-                _ => Action::SyntaxError,
-            },
-            26 => match aa_tag {
-                Id => Action::Shift(32),
-                _ => Action::SyntaxError,
-            },
-            27 => match aa_tag {
-                // Output: ">" Id #(NonAssoc, 0)
+                // Output: ">>" Id #(NonAssoc, 0)
                 EAppend | EOverWrite | Eol => Action::Reduce(13),
                 _ => Action::SyntaxError,
             },
-            28 => match aa_tag {
-                // Output: ">>" Id #(NonAssoc, 0)
-                EAppend | EOverWrite | Eol => Action::Reduce(14),
-                _ => Action::SyntaxError,
-            },
-            29 => match aa_tag {
-                // Args: Args Id "=" Id #(NonAssoc, 0)
-                Append | EAppend | EOverWrite | InputFile | OverWrite | Eol | Id | String => {
-                    Action::Reduce(9)
-                }
-                _ => Action::SyntaxError,
-            },
-            30 => match aa_tag {
+            26 => match aa_tag {
                 // CommandAction: Id Args Input Output ErrOutput Eol #(NonAssoc, 0)
-                AAEnd => Action::Reduce(5),
+                AAEnd => Action::Reduce(4),
                 _ => Action::SyntaxError,
             },
-            31 => match aa_tag {
+            27 => match aa_tag {
                 // ErrOutput: "2>" Id #(NonAssoc, 0)
-                Eol => Action::Reduce(16),
+                Eol => Action::Reduce(15),
                 _ => Action::SyntaxError,
             },
-            32 => match aa_tag {
+            28 => match aa_tag {
                 // ErrOutput: "2>>" Id #(NonAssoc, 0)
-                Eol => Action::Reduce(17),
+                Eol => Action::Reduce(16),
                 _ => Action::SyntaxError,
             },
             _ => panic!("illegal state: {aa_state}"),
@@ -448,23 +440,22 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
     fn production_data(production_id: u32) -> (AANonTerminal, usize) {
         match production_id {
             0 => (AANonTerminal::AAStart, 1),
-            1 => (AANonTerminal::CommandAction, 4),
-            2 => (AANonTerminal::CommandAction, 4),
+            1 => (AANonTerminal::CommandAction, 2),
+            2 => (AANonTerminal::CommandAction, 3),
             3 => (AANonTerminal::CommandAction, 3),
-            4 => (AANonTerminal::CommandAction, 3),
-            5 => (AANonTerminal::CommandAction, 6),
-            6 => (AANonTerminal::Args, 0),
+            4 => (AANonTerminal::CommandAction, 6),
+            5 => (AANonTerminal::Args, 0),
+            6 => (AANonTerminal::Args, 2),
             7 => (AANonTerminal::Args, 2),
             8 => (AANonTerminal::Args, 2),
-            9 => (AANonTerminal::Args, 4),
-            10 => (AANonTerminal::Input, 0),
-            11 => (AANonTerminal::Input, 2),
-            12 => (AANonTerminal::Output, 0),
+            9 => (AANonTerminal::Input, 0),
+            10 => (AANonTerminal::Input, 2),
+            11 => (AANonTerminal::Output, 0),
+            12 => (AANonTerminal::Output, 2),
             13 => (AANonTerminal::Output, 2),
-            14 => (AANonTerminal::Output, 2),
-            15 => (AANonTerminal::ErrOutput, 0),
+            14 => (AANonTerminal::ErrOutput, 0),
+            15 => (AANonTerminal::ErrOutput, 2),
             16 => (AANonTerminal::ErrOutput, 2),
-            17 => (AANonTerminal::ErrOutput, 2),
             _ => panic!("malformed production data table"),
         }
     }
@@ -475,20 +466,20 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
                 AANonTerminal::CommandAction => 1,
                 _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
             },
-            2 => match lhs {
-                AANonTerminal::Args => 6,
+            5 => match lhs {
+                AANonTerminal::Args => 9,
                 _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
             },
-            6 => match lhs {
-                AANonTerminal::Input => 11,
+            9 => match lhs {
+                AANonTerminal::Input => 12,
                 _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
             },
-            11 => match lhs {
-                AANonTerminal::Output => 19,
+            12 => match lhs {
+                AANonTerminal::Output => 17,
                 _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
             },
-            19 => match lhs {
-                AANonTerminal::ErrOutput => 24,
+            17 => match lhs {
+                AANonTerminal::ErrOutput => 21,
                 _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
             },
             _ => panic!("Malformed goto table: ({lhs}, {current_state})"),
@@ -508,26 +499,30 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
         };
         match aa_production_id {
             1 => {
-                // CommandAction: Id "=" Id Eol #(NonAssoc, 0)
+                // CommandAction: Assign Eol #(NonAssoc, 0)
 
-                *self = CommandAction::SetEnvVar(aa_rhs[0].id(), aa_rhs[2].id());
+                let string = aa_rhs[0].assign();
+                let mut parts = string.split('=');
+                let id = parts.next().unwrap().to_string();
+                let value = parts.next().unwrap();
+                let value = if value.starts_with('"') && value.ends_with('"') && value.len() >= 2 {
+                    value[1..value.len() - 1].to_string()
+                } else {
+                    value.to_string()
+                };
+                *self = CommandAction::SetEnvVar(id, value);
             }
             2 => {
-                // CommandAction: Id "=" String Eol #(NonAssoc, 0)
-
-                *self = CommandAction::SetEnvVar(aa_rhs[0].id(), aa_rhs[2].string());
-            }
-            3 => {
                 // CommandAction: "unset" Id Eol #(NonAssoc, 0)
 
                 *self = CommandAction::UnsetEnvVar(aa_rhs[1].id());
             }
-            4 => {
+            3 => {
                 // CommandAction: "cd" Id Eol #(NonAssoc, 0)
 
                 *self = CommandAction::ChangeDir(aa_rhs[1].id());
             }
-            5 => {
+            4 => {
                 // CommandAction: Id Args Input Output ErrOutput Eol #(NonAssoc, 0)
 
                 *self = CommandAction::RunProgram(
@@ -538,56 +533,55 @@ impl lalr1::Parser<AATerminal, AANonTerminal, AttributeData> for CommandAction {
                     aa_rhs[4].output(),
                 );
             }
-            6 => {
+            5 => {
                 // Args: <empty> #(NonAssoc, 0)
 
                 aa_lhs = AttributeData::Args(vec![]);
             }
-            7 => {
+            6 => {
                 // Args: Args Id #(NonAssoc, 0)
 
                 aa_lhs.args_mut().push(aa_rhs[1].id())
             }
-            8 => {
+            7 => {
                 // Args: Args String #(NonAssoc, 0)
 
                 aa_lhs.args_mut().push(aa_rhs[1].string())
             }
-            9 => {
-                // Args: Args Id "=" Id #(NonAssoc, 0)
+            8 => {
+                // Args: Args Assign #(NonAssoc, 0)
 
-                let reconstructed_flag = format!("{}={}", aa_rhs[1].id(), aa_rhs[3].id());
-                aa_lhs.args_mut().push(reconstructed_flag);
+                aa_lhs.args_mut().push(aa_rhs[1].assign())
             }
-            10 => {
+            9 => {
                 // Input: <empty> #(NonAssoc, 0)
                 aa_lhs = AttributeData::Input(None);
             }
-            11 => {
+            10 => {
                 // Input: "<" Id #(NonAssoc, 0)
                 aa_lhs = AttributeData::Input(Some(aa_rhs[1].id()));
             }
-            12 => {
+            11 => {
                 // Output: <empty> #(NonAssoc, 0)
                 aa_lhs = AttributeData::Output(None);
             }
-            13 => {
+            12 => {
                 // Output: ">" Id #(NonAssoc, 0)
                 aa_lhs = AttributeData::Output(Some((aa_rhs[1].id(), true)));
             }
-            14 => {
+            13 => {
                 // Output: ">>" Id #(NonAssoc, 0)
                 aa_lhs = AttributeData::Output(Some((aa_rhs[1].id(), false)));
             }
-            15 => {
+            14 => {
                 // ErrOutput: <empty> #(NonAssoc, 0)
                 aa_lhs = AttributeData::Output(None);
             }
-            16 => {
+            15 => {
                 // ErrOutput: "2>" Id #(NonAssoc, 0)
                 aa_lhs = AttributeData::Output(Some((aa_rhs[1].id(), true)));
             }
-            17 => {
+            16 => {
                 // ErrOutput: "2>>" Id #(NonAssoc, 0)
                 aa_lhs = AttributeData::Output(Some((aa_rhs[1].id(), false)));
             }

@@ -143,7 +143,6 @@ mod command_tests {
 
     #[test]
     fn ls_test() {
-        use CommandAction::*;
         let cmd = Command::new(" ls > /dev/null\n");
         assert!(cmd.is_ok())
     }
